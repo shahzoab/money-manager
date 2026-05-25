@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteTransaction, getTransaction } from "@/actions/transactions";
 import { formatMoney } from "@/lib/currency-format";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function TransactionDetailDialog({
 }: TransactionDetailDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [transaction, setTransaction] = useState<TransactionDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -82,6 +84,7 @@ export function TransactionDetailDialog({
     startTransition(async () => {
       try {
         await deleteTransaction(transactionId);
+        setConfirmOpen(false);
         router.refresh();
         toast.success("Transaction deleted");
         onOpenChange(false);
@@ -92,6 +95,7 @@ export function TransactionDetailDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
@@ -208,7 +212,7 @@ export function TransactionDetailDialog({
                 variant="outline"
                 className="flex-1 text-red-400 hover:text-red-400"
                 disabled={pending}
-                onClick={handleDelete}
+                onClick={() => setConfirmOpen(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -218,5 +222,15 @@ export function TransactionDetailDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title="Delete Transaction"
+      description="This transaction will be permanently deleted."
+      loading={pending}
+      onConfirm={handleDelete}
+    />
+    </>
   );
 }

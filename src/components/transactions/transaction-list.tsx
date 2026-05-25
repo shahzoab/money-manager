@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatMoney } from "@/lib/currency-format";
 import { deleteTransaction } from "@/actions/transactions";
 import { TransactionDetailDialog } from "@/components/transactions/transaction-detail-dialog";
@@ -35,6 +36,8 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [deleting, startDeleteTransition] = useTransition();
 
   function openDetail(id: string) {
     setSelectedId(id);
@@ -136,14 +139,14 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-red-400"
-                      onClick={async (e) => {
+                      aria-label="Delete transaction"
+                      onClick={(e) => {
                         e.stopPropagation();
-                        await deleteTransaction(tx.id);
-                        router.refresh();
-                        toast.success("Transaction deleted");
+                        setPendingDelete(tx.id);
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -168,6 +171,25 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
         transactionId={selectedId}
         open={editOpen}
         onOpenChange={setEditOpen}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title="Delete Transaction"
+        description="This transaction will be permanently deleted."
+        loading={deleting}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          startDeleteTransition(async () => {
+            await deleteTransaction(pendingDelete);
+            setPendingDelete(null);
+            router.refresh();
+            toast.success("Transaction deleted");
+          });
+        }}
       />
     </>
   );

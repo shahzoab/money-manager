@@ -60,28 +60,28 @@ export default async function TransactionsPage({
 
       <TransactionFilters />
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-border/60 bg-surface">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <Card className="min-w-0 border-border/60 bg-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase text-muted-foreground">Income</p>
-            <p className="text-xl font-semibold tabular-nums text-accent-secondary">
+            <p className="truncate text-xl font-semibold tabular-nums text-accent-secondary">
               {formatMoney(summary.income, baseCurrency)}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60 bg-surface">
+        <Card className="min-w-0 border-border/60 bg-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase text-muted-foreground">Expenses</p>
-            <p className="text-xl font-semibold tabular-nums">
+            <p className="truncate text-xl font-semibold tabular-nums">
               {formatMoney(summary.expenses, baseCurrency)}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-border/60 bg-surface">
+        <Card className="col-span-2 min-w-0 border-border/60 bg-surface sm:col-span-1">
           <CardContent className="p-5">
             <p className="text-xs uppercase text-muted-foreground">Net</p>
             <p
-              className={`text-xl font-semibold tabular-nums ${
+              className={`truncate text-xl font-semibold tabular-nums ${
                 summary.net >= 0 ? "text-accent-secondary" : "text-red-400"
               }`}
             >

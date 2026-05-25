@@ -23,6 +23,54 @@ const transactionSchema = z.object({
   tagIds: z.array(z.string()).optional(),
 });
 
+const transactionInclude = {
+  category: true,
+  fromAccount: true,
+  toAccount: true,
+  tags: { include: { tag: true } },
+} as const;
+
+async function computeBaseCurrencyAmount(
+  baseCurrency: string,
+  data: {
+    type: TransactionType;
+    amount: number;
+    fromAccountId?: string | null;
+    toAccountId?: string | null;
+  },
+) {
+  let amountInBaseCurrency = data.amount;
+  let exchangeRate: number | undefined;
+
+  if (data.type === TransactionType.TRANSFER && data.fromAccountId && data.toAccountId) {
+    const [fromAccount, toAccount] = await Promise.all([
+      db.walletAccount.findUnique({ where: { id: data.fromAccountId } }),
+      db.walletAccount.findUnique({ where: { id: data.toAccountId } }),
+    ]);
+    if (fromAccount && fromAccount.currency !== baseCurrency) {
+      const result = await convertAmount(data.amount, fromAccount.currency, baseCurrency);
+      amountInBaseCurrency = result.converted;
+      exchangeRate = result.rate;
+    } else if (toAccount && toAccount.currency !== baseCurrency) {
+      const result = await convertAmount(data.amount, toAccount.currency, baseCurrency);
+      amountInBaseCurrency = result.converted;
+      exchangeRate = result.rate;
+    }
+  } else {
+    const accountId = data.fromAccountId ?? data.toAccountId;
+    if (accountId) {
+      const account = await db.walletAccount.findUnique({ where: { id: accountId } });
+      if (account && account.currency !== baseCurrency) {
+        const result = await convertAmount(data.amount, account.currency, baseCurrency);
+        amountInBaseCurrency = result.converted;
+        exchangeRate = result.rate;
+      }
+    }
+  }
+
+  return { amountInBaseCurrency, exchangeRate };
+}
+
 export async function getTransactions(filters?: {
   search?: string;
   accountId?: string;
@@ -112,6 +160,16 @@ export async function getTransactions(filters?: {
   };
 }
 
+export async function getTransaction(id: string) {
+  await connection();
+  const session = await requireSession();
+  const transaction = await db.transaction.findFirstOrThrow({
+    where: { id, userId: session.user.id },
+    include: transactionInclude,
+  });
+  return serializeTransaction(transaction);
+}
+
 export async function createTransaction(input: z.infer<typeof transactionSchema>) {
   const session = await requireSession();
   const data = transactionSchema.parse(input);
@@ -125,35 +183,7 @@ export async function createTransaction(input: z.infer<typeof transactionSchema>
     where: { userId: session.user.id },
   });
   const baseCurrency = settings?.defaultCurrency ?? "USD";
-
-  let amountInBaseCurrency = data.amount;
-  let exchangeRate: number | undefined;
-
-  if (data.type === TransactionType.TRANSFER && data.fromAccountId && data.toAccountId) {
-    const [fromAccount, toAccount] = await Promise.all([
-      db.walletAccount.findUnique({ where: { id: data.fromAccountId } }),
-      db.walletAccount.findUnique({ where: { id: data.toAccountId } }),
-    ]);
-    if (fromAccount && fromAccount.currency !== baseCurrency) {
-      const result = await convertAmount(data.amount, fromAccount.currency, baseCurrency);
-      amountInBaseCurrency = result.converted;
-      exchangeRate = result.rate;
-    } else if (toAccount && toAccount.currency !== baseCurrency) {
-      const result = await convertAmount(data.amount, toAccount.currency, baseCurrency);
-      amountInBaseCurrency = result.converted;
-      exchangeRate = result.rate;
-    }
-  } else {
-    const accountId = data.fromAccountId ?? data.toAccountId;
-    if (accountId) {
-      const account = await db.walletAccount.findUnique({ where: { id: accountId } });
-      if (account && account.currency !== baseCurrency) {
-        const result = await convertAmount(data.amount, account.currency, baseCurrency);
-        amountInBaseCurrency = result.converted;
-        exchangeRate = result.rate;
-      }
-    }
-  }
+  const { amountInBaseCurrency, exchangeRate } = await computeBaseCurrencyAmount(baseCurrency, data);
 
   const transaction = await db.transaction.create({
     data: {
@@ -180,26 +210,6 @@ export async function createTransaction(input: z.infer<typeof transactionSchema>
   return transaction;
 }
 
-export async function duplicateTransaction(id: string) {
-  const session = await requireSession();
-  const original = await db.transaction.findFirstOrThrow({
-    where: { id, userId: session.user.id },
-    include: { tags: true },
-  });
-
-  return createTransaction({
-    type: original.type,
-    amount: Number(original.amount),
-    date: new Date(),
-    comment: original.comment ?? undefined,
-    photoUrl: original.photoUrl ?? undefined,
-    categoryId: original.categoryId ?? undefined,
-    fromAccountId: original.fromAccountId ?? undefined,
-    toAccountId: original.toAccountId ?? undefined,
-    tagIds: original.tags.map((t) => t.tagId),
-  });
-}
-
 export async function updateTransaction(
   id: string,
   input: Partial<z.infer<typeof transactionSchema>>,
@@ -212,23 +222,71 @@ export async function updateTransaction(
     data.toAccountId,
   ]);
 
-  const transaction = await db.transaction.update({
+  const existing = await db.transaction.findFirstOrThrow({
     where: { id, userId: session.user.id },
-    data: {
-      ...(data.type && { type: data.type }),
-      ...(data.amount !== undefined && { amount: data.amount }),
-      ...(data.date && { date: data.date }),
-      ...(data.comment !== undefined && { comment: data.comment }),
-      ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl }),
-      ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
-      ...(data.fromAccountId !== undefined && { fromAccountId: data.fromAccountId }),
-      ...(data.toAccountId !== undefined && { toAccountId: data.toAccountId }),
-    },
+  });
+
+  const merged = {
+    type: data.type ?? existing.type,
+    amount: data.amount ?? Number(existing.amount),
+    fromAccountId:
+      data.fromAccountId !== undefined ? data.fromAccountId : existing.fromAccountId,
+    toAccountId: data.toAccountId !== undefined ? data.toAccountId : existing.toAccountId,
+  };
+
+  const shouldRecalculate =
+    data.amount !== undefined ||
+    data.type !== undefined ||
+    data.fromAccountId !== undefined ||
+    data.toAccountId !== undefined;
+
+  let amountInBaseCurrency: number | undefined;
+  let exchangeRate: number | undefined;
+
+  if (shouldRecalculate) {
+    const settings = await db.userSettings.findUnique({
+      where: { userId: session.user.id },
+    });
+    const baseCurrency = settings?.defaultCurrency ?? "USD";
+    const converted = await computeBaseCurrencyAmount(baseCurrency, merged);
+    amountInBaseCurrency = converted.amountInBaseCurrency;
+    exchangeRate = converted.exchangeRate;
+  }
+
+  const transaction = await db.$transaction(async (tx) => {
+    if (data.tagIds !== undefined) {
+      await tx.transactionTag.deleteMany({ where: { transactionId: id } });
+    }
+
+    return tx.transaction.update({
+      where: { id, userId: session.user.id },
+      data: {
+        ...(data.type && { type: data.type }),
+        ...(data.amount !== undefined && { amount: data.amount }),
+        ...(data.date && { date: data.date }),
+        ...(data.comment !== undefined && { comment: data.comment }),
+        ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl }),
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+        ...(data.fromAccountId !== undefined && { fromAccountId: data.fromAccountId }),
+        ...(data.toAccountId !== undefined && { toAccountId: data.toAccountId }),
+        ...(shouldRecalculate && {
+          amountInBaseCurrency,
+          exchangeRate: exchangeRate ?? null,
+        }),
+        ...(data.tagIds !== undefined && {
+          tags: data.tagIds.length
+            ? { create: data.tagIds.map((tagId) => ({ tagId })) }
+            : undefined,
+        }),
+      },
+      include: transactionInclude,
+    });
   });
 
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
-  return transaction;
+  revalidatePath("/charts");
+  return serializeTransaction(transaction);
 }
 
 export async function deleteTransaction(id: string) {
@@ -236,6 +294,7 @@ export async function deleteTransaction(id: string) {
   await db.transaction.delete({ where: { id, userId: session.user.id } });
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
+  revalidatePath("/charts");
 }
 
 export async function getCommentSuggestions(query?: string) {

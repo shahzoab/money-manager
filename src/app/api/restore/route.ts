@@ -34,6 +34,7 @@ export async function POST(request: Request) {
           icon: (a.icon as string) ?? "wallet",
           isHidden: (a.isHidden as boolean) ?? false,
           isDefault: (a.isDefault as boolean) ?? false,
+          sortOrder: (a.sortOrder as number) ?? 0,
           notes: a.notes as string | undefined,
         })),
       });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { CategoryType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
+import { CategoriesReorderSheet } from "@/components/categories/categories-reorder-sheet";
 import { toast } from "sonner";
 
 type Category = {
@@ -37,8 +38,10 @@ type Category = {
 };
 
 export function CategoriesManager({ categories: initial }: { categories: Category[] }) {
-  const [categories] = useState(initial);
+  const [categories, setCategories] = useState(initial);
   const [open, setOpen] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
   const [editing, setEditing] = useState<Category | null>(null);
   const [pending, startTransition] = useTransition();
   const [reassignId, setReassignId] = useState<string | null>(null);
@@ -60,6 +63,19 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
   function resetForm() {
     setForm({ name: "", type: CategoryType.EXPENSE, icon: "tag", color: "#635BFF", monthlyLimit: undefined });
     setEditing(null);
+  }
+
+  const activeType =
+    activeTab === "expense" ? CategoryType.EXPENSE : CategoryType.INCOME;
+
+  function applyCategoryOrder(type: CategoryType, orderedIds: string[]) {
+    const otherCategories = categories.filter((category) => category.type !== type);
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    const reordered = orderedIds.flatMap((id) => {
+      const category = byId.get(id);
+      return category ? [category] : [];
+    });
+    setCategories([...otherCategories, ...reordered]);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -143,7 +159,11 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => setReorderOpen(true)}>
+          <ArrowUpDown className="h-4 w-4" />
+          Reorder
+        </Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -195,7 +215,7 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
         </Dialog>
       </div>
 
-      <Tabs defaultValue="expense">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "expense" | "income")}>
         <TabsList>
           <TabsTrigger value="expense">Expenses</TabsTrigger>
           <TabsTrigger value="income">Income</TabsTrigger>
@@ -238,6 +258,14 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
           </SelectContent>
         </Select>
       </ConfirmDialog>
+
+      <CategoriesReorderSheet
+        open={reorderOpen}
+        onOpenChange={setReorderOpen}
+        type={activeType}
+        categories={categories.filter((category) => category.type === activeType)}
+        onReordered={(orderedIds) => applyCategoryOrder(activeType, orderedIds)}
+      />
     </>
   );
 }

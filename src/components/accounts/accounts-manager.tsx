@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
+import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/lib/currency-format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [reorderOpen, setReorderOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
 
@@ -110,6 +112,14 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
   const visibleAccounts = accounts.filter((a) => !a.isHidden);
   const hiddenAccounts = accounts.filter((a) => a.isHidden);
 
+  function applyAccountOrder(orderedIds: string[]) {
+    const byId = new Map(accounts.map((account) => [account.id, account]));
+    setAccounts(orderedIds.flatMap((id) => {
+      const account = byId.get(id);
+      return account ? [account] : [];
+    }));
+  }
+
   function renderAccountCard(account: Account, hidden = false) {
     return (
       <Card
@@ -172,7 +182,11 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => setReorderOpen(true)}>
+          <ArrowUpDown className="h-4 w-4" />
+          Reorder
+        </Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -304,6 +318,13 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
             toast.success("Account deleted");
           });
         }}
+      />
+
+      <AccountsReorderSheet
+        open={reorderOpen}
+        onOpenChange={setReorderOpen}
+        accounts={accounts}
+        onReordered={applyAccountOrder}
       />
     </>
   );

@@ -18,13 +18,23 @@ const accountSchema = z.object({
   notes: z.string().optional(),
 });
 
+const accountOrderBy = [{ sortOrder: "asc" as const }, { name: "asc" as const }];
+
 export async function getAccounts() {
   const session = await requireSession();
   const accounts = await db.walletAccount.findMany({
     where: { userId: session.user.id, ...activeWalletAccountWhere },
-    orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    orderBy: accountOrderBy,
   });
   return accounts.map(serializeAccount);
+}
+
+async function nextAccountSortOrder(userId: string): Promise<number> {
+  const max = await db.walletAccount.aggregate({
+    where: { userId, ...activeWalletAccountWhere },
+    _max: { sortOrder: true },
+  });
+  return (max._max.sortOrder ?? -1) + 1;
 }
 
 export async function createAccount(input: z.infer<typeof accountSchema>) {
@@ -38,8 +48,10 @@ export async function createAccount(input: z.infer<typeof accountSchema>) {
     });
   }
 
+  const sortOrder = await nextAccountSortOrder(session.user.id);
+
   const account = await db.walletAccount.create({
-    data: { ...data, userId: session.user.id },
+    data: { ...data, userId: session.user.id, sortOrder },
   });
 
   revalidatePath("/accounts");
@@ -78,6 +90,38 @@ export async function updateAccount(
   return account;
 }
 
+export async function reorderAccounts(orderedIds: string[]) {
+  const session = await requireSession();
+  const userId = session.user.id;
+
+  const existing = await db.walletAccount.findMany({
+    where: { userId, ...activeWalletAccountWhere },
+    select: { id: true },
+    orderBy: accountOrderBy,
+  });
+
+  const existingIds = existing.map((a) => a.id);
+  if (
+    orderedIds.length !== existingIds.length ||
+    !orderedIds.every((id) => existingIds.includes(id))
+  ) {
+    throw new Error("Invalid account order");
+  }
+
+  await db.$transaction(
+    orderedIds.map((id, sortOrder) =>
+      db.walletAccount.update({
+        where: { id, userId },
+        data: { sortOrder },
+      }),
+    ),
+  );
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+}
+
 export async function deleteAccount(id: string) {
   const session = await requireSession();
   const userId = session.user.id;
@@ -103,7 +147,7 @@ export async function deleteAccount(id: string) {
     if (account.isDefault) {
       const nextDefault = await tx.walletAccount.findFirst({
         where: { userId, ...activeWalletAccountWhere, id: { not: id } },
-        orderBy: { name: "asc" },
+        orderBy: accountOrderBy,
       });
       if (nextDefault) {
         await tx.walletAccount.update({

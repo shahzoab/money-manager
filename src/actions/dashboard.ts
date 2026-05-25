@@ -65,7 +65,7 @@ export async function getDashboardData(options?: {
       }),
       db.walletAccount.findMany({
         where: { userId, isHidden: false, ...activeWalletAccountWhere },
-        orderBy: { name: "asc" },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
     ]);
 
@@ -158,6 +158,7 @@ export async function getChartData(options?: {
     }),
     db.category.findMany({
       where: { userId },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
   ]);
 

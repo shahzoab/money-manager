@@ -19,7 +19,10 @@ export async function generateExcelExport(userId: string): Promise<Buffer> {
       include: { fromAccount: true, toAccount: true },
       orderBy: { date: "desc" },
     }),
-    db.walletAccount.findMany({ where: { userId, ...activeWalletAccountWhere } }),
+    db.walletAccount.findMany({
+      where: { userId, ...activeWalletAccountWhere },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
     db.userSettings.findUnique({ where: { userId } }),
   ]);
 
@@ -102,8 +105,14 @@ export async function generateExcelExport(userId: string): Promise<Buffer> {
 export async function generateBackupJson(userId: string): Promise<string> {
   const [accounts, categories, transactions, tags, recurring, settings] =
     await Promise.all([
-      db.walletAccount.findMany({ where: { userId, ...activeWalletAccountWhere } }),
-      db.category.findMany({ where: { userId } }),
+      db.walletAccount.findMany({
+        where: { userId, ...activeWalletAccountWhere },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      db.category.findMany({
+        where: { userId },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
       db.transaction.findMany({
         where: { userId },
         include: { tags: true },

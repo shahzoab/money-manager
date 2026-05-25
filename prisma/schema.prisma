@@ -116,6 +116,7 @@ model WalletAccount {
   icon            String   @default("wallet")
   isHidden        Boolean  @default(false)
   isDefault       Boolean  @default(false)
+  sortOrder       Int      @default(0)
   notes           String?
   deletedAt       DateTime?
   createdAt       DateTime @default(now())

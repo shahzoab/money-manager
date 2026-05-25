@@ -60,6 +60,7 @@ export async function importExcelData(
             startingBalance: a.startingBalance,
             isHidden: a.isHidden,
             isDefault: i === 0,
+            sortOrder: i,
           })),
         });
       }

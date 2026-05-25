@@ -60,7 +60,7 @@ Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPLOADTHING_TOKEN`, VAPID
 ### 4. Apply schema
 
 ```bash
-npm run db:push
+npm run db:migrate
 ```
 
 ### 5. Run the app
@@ -76,12 +76,15 @@ Open [http://localhost:3000](http://localhost:3000), register, and start trackin
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server (webpack) |
-| `npm run build` | Production build |
+| `npm run build` | Apply migrations + production build |
 | `npm run db:dev` | Start local Postgres via Prisma Dev |
-| `npm run db:push` | Push schema to database |
-| `npm run db:migrate` | Create/run migrations |
+| `npm run db:push` | Push schema to database (prototyping) |
+| `npm run db:migrate` | Create/run migrations (local dev) |
+| `npm run db:deploy` | Apply pending migrations (production/CI) |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## Deploy
 
 Deploy to Vercel with a hosted PostgreSQL (Neon, Supabase, Prisma Postgres). Set all env vars from `.env.example`.
+
+For pooled providers, set both `DATABASE_URL` (pooled, app runtime) and `DIRECT_URL` (direct, migrations). Vercel runs `prisma migrate deploy` automatically during `npm run build`.

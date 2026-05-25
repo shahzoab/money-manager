@@ -40,7 +40,26 @@ type Account = {
   notes: string | null;
 };
 
-export function AccountsManager({ accounts: initial }: { accounts: Account[] }) {
+function createEmptyForm(defaultCurrency: string) {
+  return {
+    name: "",
+    currency: defaultCurrency,
+    startingBalance: 0,
+    color: "#635BFF",
+    icon: "wallet",
+    isHidden: false,
+    isDefault: false,
+    notes: "",
+  };
+}
+
+export function AccountsManager({
+  accounts: initial,
+  defaultCurrency = "USD",
+}: {
+  accounts: Account[];
+  defaultCurrency?: string;
+}) {
   const [accounts, setAccounts] = useState(initial);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
@@ -49,28 +68,10 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
   const [pending, startTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
 
-  const [form, setForm] = useState({
-    name: "",
-    currency: "USD",
-    startingBalance: 0,
-    color: "#635BFF",
-    icon: "wallet",
-    isHidden: false,
-    isDefault: false,
-    notes: "",
-  });
+  const [form, setForm] = useState(() => createEmptyForm(defaultCurrency));
 
   function resetForm() {
-    setForm({
-      name: "",
-      currency: "USD",
-      startingBalance: 0,
-      color: "#635BFF",
-      icon: "wallet",
-      isHidden: false,
-      isDefault: false,
-      notes: "",
-    });
+    setForm(createEmptyForm(defaultCurrency));
     setEditing(null);
   }
 
@@ -189,7 +190,7 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
         </Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={resetForm}>
               <Plus className="h-4 w-4" />
               Add Account
             </Button>
@@ -215,7 +216,7 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
                     onValueChange={(v) => setForm({ ...form, currency: v })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select currency" />
                     </SelectTrigger>
                     <SelectContent>
                       {SUPPORTED_CURRENCIES.map((c) => (

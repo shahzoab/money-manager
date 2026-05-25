@@ -1,9 +1,10 @@
 import { getAccounts } from "@/actions/accounts";
+import { getSettings } from "@/actions/recurring";
 import { getAccountBalance } from "@/lib/balance";
 import { AccountsManager } from "@/components/accounts/accounts-manager";
 
 export default async function AccountsPage() {
-  const accounts = await getAccounts();
+  const [accounts, settings] = await Promise.all([getAccounts(), getSettings()]);
 
   const accountsWithBalance = await Promise.all(
     accounts.map(async (account) => ({
@@ -21,7 +22,10 @@ export default async function AccountsPage() {
           Manage your wallets, cards, and bank accounts
         </p>
       </div>
-      <AccountsManager accounts={accountsWithBalance} />
+      <AccountsManager
+        accounts={accountsWithBalance}
+        defaultCurrency={settings?.defaultCurrency ?? "USD"}
+      />
     </div>
   );
 }

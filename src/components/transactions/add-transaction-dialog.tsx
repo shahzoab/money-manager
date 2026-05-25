@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import {
@@ -16,12 +17,26 @@ import { toast } from "sonner";
 
 type AddTransactionDialogProps = {
   trigger: React.ReactNode;
+  mobileTrigger?: React.ReactNode;
   defaultType?: TransactionType;
 };
 
-export function AddTransactionDialog({ trigger, defaultType }: AddTransactionDialogProps) {
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
+export function AddTransactionDialog({
+  trigger,
+  mobileTrigger,
+  defaultType,
+}: AddTransactionDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const isClient = useIsClient();
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -37,9 +52,16 @@ export function AddTransactionDialog({ trigger, defaultType }: AddTransactionDia
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const mobileTriggerNode = mobileTrigger ? (
+    <DialogTrigger asChild>{mobileTrigger}</DialogTrigger>
+  ) : null;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {isClient && mobileTriggerNode
+        ? createPortal(mobileTriggerNode, document.body)
+        : null}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>

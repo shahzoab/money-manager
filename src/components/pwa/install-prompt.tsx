@@ -20,7 +20,7 @@ export function PwaInstallPrompt() {
   if (!deferredPrompt || dismissed) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 flex items-center justify-between rounded-xl border border-border bg-surface p-4 shadow-xl lg:bottom-6 lg:left-auto lg:right-6 lg:w-96">
+    <div className="fixed bottom-24 left-4 right-20 z-50 flex items-center justify-between rounded-xl border border-border bg-surface p-4 shadow-xl lg:bottom-6 lg:left-auto lg:right-6 lg:w-96">
       <div className="flex items-center gap-3">
         <Download className="h-5 w-5 text-accent" />
         <div>

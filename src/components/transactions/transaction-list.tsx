@@ -2,6 +2,7 @@
 
 import { Copy, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/currency-format";
@@ -27,6 +28,8 @@ type TransactionListProps = {
 };
 
 export function TransactionList({ transactions, currency, showYear = false }: TransactionListProps) {
+  const router = useRouter();
+
   if (transactions.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -109,6 +112,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     className="h-8 w-8"
                     onClick={async () => {
                       await duplicateTransaction(tx.id);
+                      router.refresh();
                       toast.success("Transaction duplicated");
                     }}
                   >
@@ -120,6 +124,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     className="h-8 w-8 text-red-400"
                     onClick={async () => {
                       await deleteTransaction(tx.id);
+                      router.refresh();
                       toast.success("Transaction deleted");
                     }}
                   >

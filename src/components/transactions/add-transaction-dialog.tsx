@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import {
   Dialog,
@@ -32,6 +33,7 @@ type AddTransactionDialogProps = {
 };
 
 export function AddTransactionDialog({ trigger, defaultType }: AddTransactionDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>(defaultType ?? TransactionType.EXPENSE);
   const [amount, setAmount] = useState("");
@@ -103,6 +105,7 @@ export function AddTransactionDialog({ trigger, defaultType }: AddTransactionDia
               ? toAccountId
               : undefined,
         });
+        router.refresh();
         toast.success("Transaction added");
         setOpen(false);
         setAmount("");

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { CategoryType } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
+import { serializeCategory } from "@/lib/serialize";
 
 const categorySchema = z.object({
   name: z.string().min(1),
@@ -16,13 +17,14 @@ const categorySchema = z.object({
 
 export async function getCategories(type?: CategoryType) {
   const session = await requireSession();
-  return db.category.findMany({
+  const categories = await db.category.findMany({
     where: {
       userId: session.user.id,
       ...(type ? { type } : {}),
     },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
+  return categories.map(serializeCategory);
 }
 
 export async function createCategory(input: z.infer<typeof categorySchema>) {

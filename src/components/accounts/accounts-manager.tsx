@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +43,9 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
   const [accounts, setAccounts] = useState(initial);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [deleting, startDeleteTransition] = useTransition();
 
   const [form, setForm] = useState({
     name: "",
@@ -138,11 +141,7 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-red-400"
-                onClick={async () => {
-                  await deleteAccount(account.id);
-                  setAccounts(accounts.filter((a) => a.id !== account.id));
-                  toast.success("Account deleted");
-                }}
+                onClick={() => setPendingDelete({ id: account.id, name: account.name })}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -283,6 +282,29 @@ export function AccountsManager({ accounts: initial }: { accounts: Account[] }) 
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title="Delete Account"
+        description={
+          pendingDelete
+            ? `Delete account "${pendingDelete.name}"? Linked recurring payments will be deactivated.`
+            : undefined
+        }
+        loading={deleting}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          startDeleteTransition(async () => {
+            await deleteAccount(pendingDelete.id);
+            setAccounts(accounts.filter((a) => a.id !== pendingDelete.id));
+            setPendingDelete(null);
+            toast.success("Account deleted");
+          });
+        }}
+      />
     </>
   );
 }

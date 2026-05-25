@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Plus, Search } from "lucide-react";
 import { TransactionType, RecurringFrequency } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,7 @@ import { toast } from "sonner";
 type Payment = {
   id: string;
   type: TransactionType;
-  amount: unknown;
+  amount: number;
   frequency: RecurringFrequency;
   nextDueDate: Date;
   autoCreate: boolean;
@@ -232,8 +233,13 @@ function PaymentCard({
   onDelete: (id: string) => Promise<void>;
   upcoming?: boolean;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, startDeleteTransition] = useTransition();
   const currency = payment.account?.currency ?? "USD";
+  const label = payment.comment || "Recurring payment";
+
   return (
+    <>
     <Card className="border-border/60 bg-surface">
       <CardContent className="flex items-center justify-between p-4">
         <div>
@@ -258,10 +264,7 @@ function PaymentCard({
               variant="ghost"
               size="sm"
               className="mt-1 text-red-400"
-              onClick={async () => {
-                await onDelete(payment.id);
-                toast.success("Removed");
-              }}
+              onClick={() => setConfirmOpen(true)}
             >
               Remove
             </Button>
@@ -269,5 +272,23 @@ function PaymentCard({
         </div>
       </CardContent>
     </Card>
+
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title="Remove Recurring Payment"
+      description={`Remove "${label}"? This recurring payment will be deactivated.`}
+      confirmLabel="Remove"
+      loading={deleting}
+      onConfirm={() => {
+        startDeleteTransition(async () => {
+          await onDelete(payment.id);
+          setConfirmOpen(false);
+          toast.success("Removed");
+          window.location.reload();
+        });
+      }}
+    />
+    </>
   );
 }

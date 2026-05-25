@@ -10,6 +10,7 @@ import {
 } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
+import { serializeRecurringPayment } from "@/lib/serialize";
 import {
   addDays,
   addWeeks,
@@ -45,7 +46,7 @@ function getNextDueDate(date: Date, frequency: RecurringFrequency): Date {
 
 export async function getRecurringPayments(search?: string) {
   const session = await requireSession();
-  return db.recurringPayment.findMany({
+  const payments = await db.recurringPayment.findMany({
     where: {
       userId: session.user.id,
       isActive: true,
@@ -60,12 +61,13 @@ export async function getRecurringPayments(search?: string) {
     },
     orderBy: { nextDueDate: "asc" },
   });
+  return payments.map(serializeRecurringPayment);
 }
 
 export async function getUpcomingPayments(days = 30) {
   const session = await requireSession();
   const until = addDays(new Date(), days);
-  return db.recurringPayment.findMany({
+  const payments = await db.recurringPayment.findMany({
     where: {
       userId: session.user.id,
       isActive: true,
@@ -74,6 +76,7 @@ export async function getUpcomingPayments(days = 30) {
     include: { category: true, account: true },
     orderBy: { nextDueDate: "asc" },
   });
+  return payments.map(serializeRecurringPayment);
 }
 
 export async function createRecurringPayment(

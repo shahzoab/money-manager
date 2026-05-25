@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { Copy, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatMoney } from "@/lib/currency-format";
 import { duplicateTransaction, deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
@@ -12,7 +14,7 @@ import { toast } from "sonner";
 type TransactionRow = {
   id: string;
   type: TransactionType;
-  amount: unknown;
+  amount: number;
   date: Date;
   comment: string | null;
   category: { name: string; color: string } | null;
@@ -29,6 +31,8 @@ type TransactionListProps = {
 
 export function TransactionList({ transactions, currency, showYear = false }: TransactionListProps) {
   const router = useRouter();
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [deleting, startDeleteTransition] = useTransition();
 
   if (transactions.length === 0) {
     return (
@@ -39,6 +43,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
   }
 
   return (
+    <>
     <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full text-sm">
         <thead>
@@ -119,14 +124,12 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-400"
-                    onClick={async () => {
-                      await deleteTransaction(tx.id);
-                      router.refresh();
-                      toast.success("Transaction deleted");
-                    }}
+                    aria-label="Delete transaction"
+                    onClick={() => setPendingDelete(tx.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -137,5 +140,25 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
         </tbody>
       </table>
     </div>
+
+    <ConfirmDialog
+      open={pendingDelete !== null}
+      onOpenChange={(open) => {
+        if (!open) setPendingDelete(null);
+      }}
+      title="Delete Transaction"
+      description="This transaction will be permanently deleted."
+      loading={deleting}
+      onConfirm={() => {
+        if (!pendingDelete) return;
+        startDeleteTransition(async () => {
+          await deleteTransaction(pendingDelete);
+          setPendingDelete(null);
+          router.refresh();
+          toast.success("Transaction deleted");
+        });
+      }}
+    />
+    </>
   );
 }

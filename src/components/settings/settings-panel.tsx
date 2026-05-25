@@ -8,6 +8,7 @@ import {
   RoundingMode,
 } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +65,11 @@ export function SettingsPanel({
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [pendingTagDelete, setPendingTagDelete] = useState<Tag | null>(null);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [deletingTag, startDeleteTagTransition] = useTransition();
 
   function saveSettings(partial: Parameters<typeof updateSettings>[0]) {
     startTransition(async () => {
@@ -296,13 +302,7 @@ export function SettingsPanel({
                 </button>
                 <button
                   className="opacity-60 hover:opacity-100"
-                  onClick={() =>
-                    startTransition(async () => {
-                      await deleteTag(tag.id);
-                      toast.success("Tag deleted");
-                      window.location.reload();
-                    })
-                  }
+                  onClick={() => setPendingTagDelete(tag)}
                 >
                   ×
                 </button>
@@ -361,17 +361,12 @@ export function SettingsPanel({
                 type="file"
                 accept=".json"
                 className="hidden"
-                onChange={async (e) => {
+                onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const text = await file.text();
-                  await fetch("/api/restore", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: text,
-                  });
-                  toast.success("Data restored");
-                  window.location.reload();
+                  setRestoreFile(file);
+                  setRestoreOpen(true);
+                  e.target.value = "";
                 }}
               />
             </label>
@@ -462,6 +457,67 @@ export function SettingsPanel({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingTagDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingTagDelete(null);
+        }}
+        title="Delete Tag"
+        description={
+          pendingTagDelete ? `Delete tag "${pendingTagDelete.name}"?` : undefined
+        }
+        loading={deletingTag}
+        onConfirm={() => {
+          if (!pendingTagDelete) return;
+          startDeleteTagTransition(async () => {
+            await deleteTag(pendingTagDelete.id);
+            setPendingTagDelete(null);
+            toast.success("Tag deleted");
+            window.location.reload();
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={restoreOpen}
+        onOpenChange={(open) => {
+          setRestoreOpen(open);
+          if (!open) setRestoreFile(null);
+        }}
+        title="Restore JSON Backup"
+        description={
+          restoreFile
+            ? `This will replace all your existing data with the backup from ${restoreFile.name}.`
+            : undefined
+        }
+        confirmLabel="Restore"
+        loadingLabel="Restoring…"
+        loading={restoring}
+        onConfirm={async () => {
+          if (!restoreFile) return;
+          setRestoring(true);
+          try {
+            const text = await restoreFile.text();
+            const res = await fetch("/api/restore", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: text,
+            });
+            if (!res.ok) {
+              throw new Error("Restore failed");
+            }
+            toast.success("Data restored");
+            setRestoreOpen(false);
+            setRestoreFile(null);
+            window.location.reload();
+          } catch {
+            toast.error("Restore failed");
+          } finally {
+            setRestoring(false);
+          }
+        }}
+      />
     </div>
   );
 }

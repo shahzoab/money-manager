@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/auth-server";
 import { assertActiveWalletAccounts } from "@/lib/accounts";
 import { db } from "@/lib/db";
 import { convertAmount } from "@/lib/currency";
+import { serializeTransaction } from "@/lib/serialize";
 import { buildTransactionSummary } from "@/lib/transaction-summary";
 
 const transactionSchema = z.object({
@@ -103,7 +104,12 @@ export async function getTransactions(filters?: {
 
   const summary = buildTransactionSummary(aggregates);
 
-  return { transactions, total, baseCurrency, summary };
+  return {
+    transactions: transactions.map(serializeTransaction),
+    total,
+    baseCurrency,
+    summary,
+  };
 }
 
 export async function createTransaction(input: z.infer<typeof transactionSchema>) {

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSession } from "@/lib/auth-server";
 import { activeWalletAccountWhere } from "@/lib/accounts";
 import { db } from "@/lib/db";
+import { serializeAccount } from "@/lib/serialize";
 
 const accountSchema = z.object({
   name: z.string().min(1),
@@ -19,10 +20,11 @@ const accountSchema = z.object({
 
 export async function getAccounts() {
   const session = await requireSession();
-  return db.walletAccount.findMany({
+  const accounts = await db.walletAccount.findMany({
     where: { userId: session.user.id, ...activeWalletAccountWhere },
     orderBy: [{ isDefault: "desc" }, { name: "asc" }],
   });
+  return accounts.map(serializeAccount);
 }
 
 export async function createAccount(input: z.infer<typeof accountSchema>) {

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { CategoryType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +42,12 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
   const [editing, setEditing] = useState<Category | null>(null);
   const [pending, startTransition] = useTransition();
   const [reassignId, setReassignId] = useState<string | null>(null);
+  const [reassignToId, setReassignToId] = useState<string | undefined>(undefined);
+
+  function closeDeleteDialog() {
+    setReassignId(null);
+    setReassignToId(undefined);
+  }
 
   const [form, setForm] = useState({
     name: "",
@@ -119,7 +126,10 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-400"
-                  onClick={() => setReassignId(cat.id)}
+                  onClick={() => {
+                    setReassignId(cat.id);
+                    setReassignToId(undefined);
+                  }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -194,32 +204,40 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
         <TabsContent value="income" className="mt-4">{renderList(CategoryType.INCOME)}</TabsContent>
       </Tabs>
 
-      <Dialog open={!!reassignId} onOpenChange={() => setReassignId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Reassign transactions to another category (optional):
-          </p>
-          <Select onValueChange={(v) => {
-            if (reassignId) {
-              deleteCategory(reassignId, v === "none" ? undefined : v);
-              toast.success("Category deleted");
-              setReassignId(null);
-              window.location.reload();
-            }
-          }}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Don&apos;t reassign</SelectItem>
-              {categories.filter((c) => c.id !== reassignId).map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!reassignId}
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog();
+        }}
+        title="Delete Category"
+        description="This category will be permanently deleted."
+        loading={pending}
+        onConfirm={() => {
+          if (!reassignId) return;
+          startTransition(async () => {
+            await deleteCategory(reassignId, reassignToId);
+            toast.success("Category deleted");
+            closeDeleteDialog();
+            window.location.reload();
+          });
+        }}
+      >
+        <p className="text-sm text-muted-foreground">
+          Reassign transactions to another category (optional):
+        </p>
+        <Select
+          value={reassignToId ?? "none"}
+          onValueChange={(v) => setReassignToId(v === "none" ? undefined : v)}
+        >
+          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Don&apos;t reassign</SelectItem>
+            {categories.filter((c) => c.id !== reassignId).map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </ConfirmDialog>
     </>
   );
 }

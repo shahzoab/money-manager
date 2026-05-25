@@ -5,6 +5,7 @@ import { activeWalletAccountWhere } from "@/lib/accounts";
 import { db } from "@/lib/db";
 import { getPeriodRange, type Period } from "@/lib/periods";
 import { getTotalBalanceInCurrency } from "@/lib/balance";
+import { serializeAccount, serializeTransaction } from "@/lib/serialize";
 import { buildTransactionSummary } from "@/lib/transaction-summary";
 import { TransactionType } from "@/generated/prisma/client";
 
@@ -118,8 +119,8 @@ export async function getDashboardData(options?: {
     netFlow,
     baseCurrency,
     period,
-    transactions: recentTransactions,
-    accounts,
+    transactions: recentTransactions.map(serializeTransaction),
+    accounts: accounts.map(serializeAccount),
     trendData,
     categoryData,
     settings,

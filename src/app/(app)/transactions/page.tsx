@@ -60,7 +60,7 @@ export default async function TransactionsPage({
 
       <TransactionFilters />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card className="min-w-0 border-border/60 bg-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase text-muted-foreground">Income</p>
@@ -77,7 +77,15 @@ export default async function TransactionsPage({
             </p>
           </CardContent>
         </Card>
-        <Card className="col-span-2 min-w-0 border-border/60 bg-surface sm:col-span-1">
+        <Card className="min-w-0 border-border/60 bg-surface">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase text-muted-foreground">Transfers</p>
+            <p className="truncate text-xl font-semibold tabular-nums">
+              {formatMoney(summary.transfers, baseCurrency)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="min-w-0 border-border/60 bg-surface">
           <CardContent className="p-5">
             <p className="text-xs uppercase text-muted-foreground">Net</p>
             <p

@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Better Auth ───────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions          Session[]
+  accounts          Account[]
+  walletAccounts    WalletAccount[]
+  categories        Category[]
+  transactions      Transaction[]
+  tags              Tag[]
+  recurringPayments RecurringPayment[]
+  settings          UserSettings?
+  pushSubscriptions PushSubscription[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// ─── App Models ────────────────────────────────────────────────────────────
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+  TRANSFER
+}
+
+enum CategoryType {
+  EXPENSE
+  INCOME
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum DecimalSeparator {
+  DOT
+  COMMA
+}
+
+enum RoundingMode {
+  NONE
+  NEAREST
+  UP
+  DOWN
+}
+
+model WalletAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  currency        String   @default("USD")
+  startingBalance Decimal  @default(0) @db.Decimal(18, 4)
+  color           String   @default("#635BFF")
+  icon            String   @default("wallet")
+  isHidden        Boolean  @default(false)
+  isDefault       Boolean  @default(false)
+  notes           String?
+  deletedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactionsFrom Transaction[] @relation("FromAccount")
+  transactionsTo   Transaction[] @relation("ToAccount")
+  recurringPayments RecurringPayment[]
+
+  @@index([userId])
+}
+
+model Category {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  type         CategoryType
+  icon         String       @default("tag")
+  color        String       @default("#635BFF")
+  monthlyLimit Decimal?     @db.Decimal(18, 4)
+  isTemplate   Boolean      @default(false)
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  transactions      Transaction[]
+  recurringPayments RecurringPayment[]
+
+  @@index([userId, type])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#888888")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions      TransactionTag[]
+  recurringPayments RecurringPaymentTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Transaction {
+  id                   String          @id @default(cuid())
+  userId               String
+  user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                 TransactionType
+  amount               Decimal         @db.Decimal(18, 4)
+  amountInBaseCurrency Decimal         @db.Decimal(18, 4)
+  exchangeRate         Decimal?        @db.Decimal(18, 8)
+  date                 DateTime
+  comment              String?
+  photoUrl             String?
+  categoryId           String?
+  category             Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  fromAccountId        String?
+  fromAccount          WalletAccount?  @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: SetNull)
+  toAccountId          String?
+  toAccount            WalletAccount?  @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  recurringPaymentId   String?
+  recurringPayment     RecurringPayment? @relation(fields: [recurringPaymentId], references: [id], onDelete: SetNull)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  tags TransactionTag[]
+
+  @@index([userId, date])
+  @@index([userId, type])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([categoryId])
+}
+
+model TransactionTag {
+  transactionId String
+  tagId         String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, tagId])
+}
+
+model RecurringPayment {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            TransactionType
+  amount          Decimal            @db.Decimal(18, 4)
+  frequency       RecurringFrequency
+  nextDueDate     DateTime
+  reminderAt      DateTime?
+  autoCreate      Boolean            @default(false)
+  comment         String?
+  categoryId      String?
+  category        Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  accountId       String?
+  account         WalletAccount?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  transactions Transaction[]
+  tags         RecurringPaymentTag[]
+
+  @@index([userId, nextDueDate])
+}
+
+model RecurringPaymentTag {
+  recurringPaymentId String
+  tagId              String
+  recurringPayment   RecurringPayment @relation(fields: [recurringPaymentId], references: [id], onDelete: Cascade)
+  tag                Tag              @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([recurringPaymentId, tagId])
+}
+
+model UserSettings {
+  id               String           @id @default(cuid())
+  userId           String           @unique
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultCurrency  String           @default("USD")
+  decimalSeparator DecimalSeparator @default(DOT)
+  roundingMode     RoundingMode     @default(NONE)
+  firstDayOfWeek   Int              @default(1)
+  financialWeekStart Int            @default(1)
+  homePeriod       String           @default("month")
+  appLockEnabled   Boolean          @default(false)
+  appLockHash      String?
+  locale           String           @default("en")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  base      String
+  target    String
+  rate      Decimal  @db.Decimal(18, 8)
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, target, fetchedAt])
+  @@index([base, target])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

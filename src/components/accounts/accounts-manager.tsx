@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ColorPickerField } from "@/components/ui/color-picker-field";
 import { PickerField } from "@/components/ui/picker-field";
 import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
 import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
@@ -212,25 +213,22 @@ export function AccountsManager({
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <PickerField
-                    value={form.currency}
-                    onValueChange={(v) => setForm({ ...form, currency: v })}
-                    options={currencyOptions}
-                    placeholder="Select currency"
-                    title="Select currency"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Color</Label>
-                  <Input
-                    type="color"
-                    value={form.color}
-                    onChange={(e) => setForm({ ...form, color: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <PickerField
+                  value={form.currency}
+                  onValueChange={(v) => setForm({ ...form, currency: v })}
+                  options={currencyOptions}
+                  placeholder="Select currency"
+                  title="Select currency"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <ColorPickerField
+                  value={form.color}
+                  onChange={(color) => setForm({ ...form, color })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Icon</Label>

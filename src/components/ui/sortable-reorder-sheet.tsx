@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { EntityIcon } from "@/components/ui/entity-icon";
+import { listTextClass } from "@/lib/form-field-styles";
 import { cn } from "@/lib/utils";
 
 export type ReorderItem = {
@@ -101,7 +102,7 @@ function SortableRow({
         />
       ) : null}
 
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>
+      <span className={cn("min-w-0 flex-1 truncate font-medium", listTextClass)}>{item.label}</span>
 
       {item.badge && (
         <span className="shrink-0 rounded bg-muted/20 px-2 py-0.5 text-xs text-muted-foreground">

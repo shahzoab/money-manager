@@ -5,6 +5,7 @@ import { TransactionSummaryCards } from "@/components/transactions/transaction-s
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { AccountFilter } from "@/components/dashboard/account-filter";
 
@@ -31,8 +32,8 @@ export default async function DashboardPage({
     <div className="min-w-0 max-w-full space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className={pageTitleClass}>Dashboard</h1>
+          <p className={pageSubtitleClass}>
             Your financial overview
           </p>
         </div>
@@ -51,7 +52,7 @@ export default async function DashboardPage({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Recent Transactions</CardTitle>
+          <CardTitle>Recent Transactions</CardTitle>
           <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" asChild>
             <Link href={transactionsHref}>
               View all

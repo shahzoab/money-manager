@@ -3,6 +3,7 @@ import { getSettings } from "@/actions/recurring";
 import { getTransactions } from "@/actions/transactions";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionSummaryCards } from "@/components/transactions/transaction-summary-cards";
 import { getPeriodRange, type Period } from "@/lib/periods";
@@ -44,8 +45,8 @@ export default async function TransactionsPage({
   return (
     <div className="min-w-0 max-w-full space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Transactions</h1>
+        <p className={pageSubtitleClass}>
           {total} transaction{total !== 1 ? "s" : ""}
         </p>
       </div>
@@ -61,7 +62,7 @@ export default async function TransactionsPage({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">All Transactions</CardTitle>
+          <CardTitle>All Transactions</CardTitle>
         </CardHeader>
         <CardContent className="p-0 pb-2">
           <TransactionList

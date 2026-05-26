@@ -1,6 +1,7 @@
 import { getAccounts } from "@/actions/accounts";
 import { getSettings } from "@/actions/recurring";
 import { getAccountBalance } from "@/lib/balance";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { AccountsManager } from "@/components/accounts/accounts-manager";
 
 export default async function AccountsPage() {
@@ -17,8 +18,8 @@ export default async function AccountsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Accounts</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Accounts</h1>
+        <p className={pageSubtitleClass}>
           Manage your wallets, cards, and bank accounts
         </p>
       </div>

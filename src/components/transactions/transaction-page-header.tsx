@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { cn } from "@/lib/utils";
 
 type TransactionPageHeaderProps = {
@@ -33,9 +34,9 @@ export function TransactionPageHeader({
         {backLabel}
       </Link>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className={pageTitleClass}>{title}</h1>
         {subtitle ? (
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <p className={cn("mt-1", pageSubtitleClass)}>{subtitle}</p>
         ) : null}
       </div>
     </div>

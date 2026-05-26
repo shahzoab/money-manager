@@ -1,4 +1,5 @@
 import { getRecurringPayments, getUpcomingPayments } from "@/actions/recurring";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { RecurringManager } from "@/components/recurring/recurring-manager";
 
 export default async function RecurringPage({
@@ -15,8 +16,8 @@ export default async function RecurringPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Recurring Payments</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Recurring Payments</h1>
+        <p className={pageSubtitleClass}>
           Manage regular income and expenses
         </p>
       </div>

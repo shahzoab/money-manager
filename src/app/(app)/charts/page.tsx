@@ -3,6 +3,7 @@ import {
   CategoryBarChart,
   BudgetProgress
 } from "@/components/charts/category-charts";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { formatAmount } from "@/lib/currency-format";
@@ -23,8 +24,8 @@ export default async function ChartsPage({
   return (
     <div className="min-w-0 max-w-full space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Charts & Reports</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Charts & Reports</h1>
+        <p className={pageSubtitleClass}>
           Analyze your spending patterns
         </p>
       </div>
@@ -61,7 +62,7 @@ export default async function ChartsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/60 bg-surface">
           <CardHeader>
-            <CardTitle className="text-base">Cash Flow Trend</CardTitle>
+            <CardTitle>Cash Flow Trend</CardTitle>
           </CardHeader>
           <CardContent>
             <TrendChart
@@ -73,7 +74,7 @@ export default async function ChartsPage({
 
         <Card className="border-border/60 bg-surface">
           <CardHeader>
-            <CardTitle className="text-base">Spending by Category</CardTitle>
+            <CardTitle>Spending by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <CategoryBarChart
@@ -89,7 +90,7 @@ export default async function ChartsPage({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">Budget Limits</CardTitle>
+          <CardTitle>Budget Limits</CardTitle>
         </CardHeader>
         <CardContent>
           <BudgetProgress

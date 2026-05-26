@@ -138,7 +138,7 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
                 {transaction.tags.map(({ tag }) => (
                   <span
                     key={tag.name}
-                    className="rounded px-1.5 py-0.5 text-[10px]"
+                    className="rounded px-1.5 py-0.5 text-xs"
                     style={{ background: `${tag.color}22`, color: tag.color }}
                   >
                     {tag.name}

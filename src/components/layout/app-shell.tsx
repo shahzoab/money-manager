@@ -13,10 +13,12 @@ import {
   Settings,
   Plus,
   Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { mobileNavLinkClass } from "@/lib/form-field-styles";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
 import { formatAmount, wholeNumberFormat } from "@/lib/currency-format";
 
@@ -33,9 +35,11 @@ const navItems = [
 function NavLinks({
   pathname,
   onNavigate,
+  mobile = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
+  mobile?: boolean;
 }) {
   return (
     <>
@@ -48,13 +52,14 @@ function NavLinks({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center gap-3 transition-colors",
+              mobile ? mobileNavLinkClass : "rounded-lg px-3 py-2.5 text-sm font-medium",
               active
                 ? "bg-accent/10 text-accent"
                 : "text-muted-foreground hover:bg-surface-elevated hover:text-foreground",
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className={mobile ? "h-5 w-5" : "h-4 w-4"} />
             {item.label}
           </Link>
         );
@@ -116,8 +121,8 @@ export function AppShell({
       </aside>
 
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
-        <SheetContent side="left" className="w-64 p-0">
-          <div className="flex h-16 items-center border-b border-border px-6">
+        <SheetContent side="left" className="w-64 p-0" showClose={false}>
+          <div className="flex h-16 items-center justify-between border-b border-border px-6">
             <Link
               href="/dashboard"
               className="text-lg font-bold tracking-tight"
@@ -125,9 +130,13 @@ export function AppShell({
             >
               Money<span className="text-accent">Manager</span>
             </Link>
+            <SheetClose className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </SheetClose>
           </div>
-          <nav className="flex-1 space-y-1 p-4">
-            <NavLinks pathname={pathname} onNavigate={() => setNavOpen(false)} />
+          <nav className="flex-1 space-y-2 p-4">
+            <NavLinks pathname={pathname} onNavigate={() => setNavOpen(false)} mobile />
           </nav>
         </SheetContent>
       </Sheet>
@@ -151,7 +160,7 @@ export function AppShell({
           <div className="flex items-center gap-2">
             {totalBalance !== undefined && (
               <div className="text-right">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Total
                 </p>
                 <p className="text-xl font-semibold tabular-nums text-accent">

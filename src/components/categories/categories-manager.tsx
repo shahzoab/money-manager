@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ColorPickerField } from "@/components/ui/color-picker-field";
 import { PickerField } from "@/components/ui/picker-field";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { CategoriesReorderSheet } from "@/components/categories/categories-reorder-sheet";
@@ -23,6 +24,7 @@ import { EntityIcon } from "@/components/ui/entity-icon";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { CATEGORY_ICONS } from "@/lib/icon-map";
+import { transactionTypeStyles } from "@/lib/transaction-type-styles";
 import { toast } from "sonner";
 
 const categoryTypeOptions = [
@@ -184,21 +186,22 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                 <Label>Name</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <PickerField
-                    value={form.type}
-                    onValueChange={(v) => setForm({ ...form, type: v as CategoryType })}
-                    options={categoryTypeOptions}
-                    placeholder="Select type"
-                    title="Select type"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Color</Label>
-                  <Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-                </div>
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <PickerField
+                  value={form.type}
+                  onValueChange={(v) => setForm({ ...form, type: v as CategoryType })}
+                  options={categoryTypeOptions}
+                  placeholder="Select type"
+                  title="Select type"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <ColorPickerField
+                  value={form.color}
+                  onChange={(color) => setForm({ ...form, color })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Icon</Label>
@@ -228,10 +231,20 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
         </Dialog>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "expense" | "income")}>
-        <TabsList>
-          <TabsTrigger value="expense">Expenses</TabsTrigger>
-          <TabsTrigger value="income">Income</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "expense" | "income")} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-surface-elevated p-1">
+          <TabsTrigger
+            value="expense"
+            className={transactionTypeStyles(CategoryType.EXPENSE).tab}
+          >
+            Expenses
+          </TabsTrigger>
+          <TabsTrigger
+            value="income"
+            className={transactionTypeStyles(CategoryType.INCOME).tab}
+          >
+            Income
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="expense" className="mt-4">{renderList(CategoryType.EXPENSE)}</TabsContent>
         <TabsContent value="income" className="mt-4">{renderList(CategoryType.INCOME)}</TabsContent>

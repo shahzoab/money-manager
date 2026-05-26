@@ -16,6 +16,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { formFieldClass, sheetItemClass, sheetTitleClass } from "@/lib/form-field-styles";
 import { cn } from "@/lib/utils";
 
 export type PickerOption = {
@@ -53,7 +54,8 @@ function PickerTrigger({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex min-h-14 w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
+        "flex w-full items-center justify-between border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
+        formFieldClass,
         className,
       )}
     >
@@ -95,11 +97,11 @@ function MobilePickerSheet({
       >
         <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border" />
         <SheetHeader className="shrink-0 px-5 pb-3 pt-4 text-left">
-          <SheetTitle className="text-xl">{title}</SheetTitle>
+          <SheetTitle className={sheetTitleClass}>{title}</SheetTitle>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
           {options.length === 0 ? (
-            <p className="px-4 py-8 text-center text-base text-muted-foreground">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               {emptyMessage ?? "No options available"}
             </p>
           ) : (
@@ -112,13 +114,14 @@ function MobilePickerSheet({
                       type="button"
                       onClick={() => handleSelect(option.value)}
                       className={cn(
-                        "flex min-h-16 w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-lg transition-colors",
+                        "flex w-full items-center gap-4 text-left transition-colors",
+                        sheetItemClass,
                         isSelected
                           ? "bg-surface-elevated font-semibold ring-1 ring-accent/40"
                           : "hover:bg-surface-elevated/60 active:bg-surface-elevated",
                       )}
                     >
-                      <span className="flex min-w-0 flex-1 items-center gap-3 text-lg [&_*]:text-lg">
+                      <span className="flex min-w-0 flex-1 items-center gap-3 [&_*]:text-[inherit]">
                         {option.label}
                       </span>
                       {isSelected ? (

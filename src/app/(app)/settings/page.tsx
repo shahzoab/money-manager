@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-server";
 import { getSettings, getTags } from "@/actions/recurring";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 
 export default async function SettingsPage() {
@@ -12,8 +13,8 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Settings</h1>
+        <p className={pageSubtitleClass}>
           Customize your experience
         </p>
       </div>

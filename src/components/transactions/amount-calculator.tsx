@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -72,14 +73,5 @@ export function AmountCalculator({ onResult }: AmountCalculatorProps) {
         </Button>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Input(props: React.ComponentProps<"input">) {
-  return (
-    <input
-      {...props}
-      className={`flex h-10 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm ${props.className ?? ""}`}
-    />
   );
 }

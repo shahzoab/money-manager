@@ -8,7 +8,9 @@ import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { listTextClass } from "@/lib/form-field-styles";
 import { formatMoney, wholeNumberFormat } from "@/lib/currency-format";
+import { cn } from "@/lib/utils";
 import { EntityIcon } from "@/components/ui/entity-icon";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
@@ -38,7 +40,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
 
   if (transactions.length === 0) {
     return (
-      <div className="py-12 text-center text-base text-muted-foreground lg:text-sm">
+      <div className="py-12 text-center text-sm text-muted-foreground">
         No transactions yet.{" "}
         <Link href="/transactions/new" className="text-accent hover:underline">
           Add one
@@ -51,7 +53,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
   return (
     <>
       <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-0 text-lg lg:text-sm">
+        <table className={cn("w-full min-w-0", listTextClass)}>
           <thead>
             <tr className="border-b border-border bg-surface-elevated text-left text-sm uppercase tracking-wider text-muted-foreground lg:text-xs">
               <th className="px-3 py-4 sm:px-4 lg:py-3">Date</th>
@@ -79,7 +81,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                       {tx.tags.map(({ tag }) => (
                         <span
                           key={tag.name}
-                          className="rounded px-1.5 py-0.5 text-xs lg:text-[10px]"
+                          className="rounded px-1.5 py-0.5 text-xs"
                           style={{ background: `${tag.color}22`, color: tag.color }}
                         >
                           {tag.name}
@@ -102,7 +104,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     : tx.fromAccount?.name ?? tx.toAccount?.name ?? "—"}
                 </td>
                 <td
-                  className={`whitespace-nowrap px-3 py-4 text-right text-lg font-semibold tabular-nums sm:px-4 lg:py-3 lg:text-base ${
+                  className={`whitespace-nowrap px-3 py-4 text-right text-base font-semibold tabular-nums sm:px-4 lg:py-3 lg:text-sm ${
                     tx.type === TransactionType.INCOME
                       ? "text-accent-secondary"
                       : tx.type === TransactionType.EXPENSE

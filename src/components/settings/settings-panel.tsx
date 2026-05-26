@@ -134,7 +134,7 @@ export function SettingsPanel({
     <div className="grid gap-6 lg:grid-cols-2">
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">Profile</CardTitle>
+          <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -158,7 +158,7 @@ export function SettingsPanel({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">Preferences</CardTitle>
+          <CardTitle>Preferences</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -216,7 +216,7 @@ export function SettingsPanel({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">Security</CardTitle>
+          <CardTitle>Security</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -250,7 +250,7 @@ export function SettingsPanel({
 
       <Card className="border-border/60 bg-surface">
         <CardHeader>
-          <CardTitle className="text-base">Tags</CardTitle>
+          <CardTitle>Tags</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -310,7 +310,7 @@ export function SettingsPanel({
 
       <Card className="border-border/60 bg-surface lg:col-span-2">
         <CardHeader>
-          <CardTitle className="text-base">Data & Export</CardTitle>
+          <CardTitle>Data & Export</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button variant="outline" className="gap-2" asChild>

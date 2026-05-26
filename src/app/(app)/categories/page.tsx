@@ -1,4 +1,5 @@
 import { getCategories } from "@/actions/categories";
+import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { CategoriesManager } from "@/components/categories/categories-manager";
 
 export default async function CategoriesPage() {
@@ -7,8 +8,8 @@ export default async function CategoriesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Categories</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className={pageTitleClass}>Categories</h1>
+        <p className={pageSubtitleClass}>
           Organize your income and expenses
         </p>
       </div>

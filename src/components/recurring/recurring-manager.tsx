@@ -256,7 +256,7 @@ function PaymentCard({
             {formatMoney(Number(payment.amount), currency)}
           </p>
           {payment.autoCreate && (
-            <span className="text-[10px] text-muted-foreground">Auto-create</span>
+            <span className="text-xs text-muted-foreground">Auto-create</span>
           )}
           {upcoming && (
             <Button

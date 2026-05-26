@@ -4,7 +4,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
-import { TransactionType } from "@/generated/prisma/enums";
+import { TransactionType, CategoryType } from "@/generated/prisma/enums";
 
 export function transactionTypeLabel(type: TransactionType) {
   switch (type) {
@@ -28,9 +28,10 @@ export function transactionTypeIcon(type: TransactionType): LucideIcon {
   }
 }
 
-export function transactionTypeStyles(type: TransactionType) {
+export function transactionTypeStyles(type: TransactionType | CategoryType) {
   switch (type) {
     case TransactionType.INCOME:
+    case CategoryType.INCOME:
       return {
         badge: "bg-accent-secondary/15 text-accent-secondary",
         tab: "data-[state=active]:bg-accent-secondary/15 data-[state=active]:text-accent-secondary",
@@ -39,6 +40,7 @@ export function transactionTypeStyles(type: TransactionType) {
         ring: "ring-accent-secondary/30",
       };
     case TransactionType.EXPENSE:
+    case CategoryType.EXPENSE:
       return {
         badge: "bg-surface-elevated text-foreground",
         tab: "data-[state=active]:bg-surface-elevated data-[state=active]:text-foreground",

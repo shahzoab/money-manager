@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { sheetItemClass, sheetTitleClass } from "@/lib/form-field-styles";
 
 type EntityActionsSheetProps = {
   entityName: string;
@@ -71,13 +72,16 @@ export function EntityActionsSheet({
               {icon && color ? (
                 <EntityIcon icon={icon} color={color} fallback={iconFallback} />
               ) : null}
-              <SheetTitle className="text-base">{entityName}</SheetTitle>
+              <SheetTitle className={sheetTitleClass}>{entityName}</SheetTitle>
             </div>
           </SheetHeader>
           <div className="space-y-2">
             <button
               type="button"
-              className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-surface-elevated active:bg-surface-elevated"
+              className={cn(
+                "flex w-full items-center gap-3 text-left transition-colors hover:bg-surface-elevated active:bg-surface-elevated",
+                sheetItemClass,
+              )}
               onClick={handleEdit}
             >
               <Pencil className="h-5 w-5 text-muted-foreground" aria-hidden />
@@ -85,7 +89,10 @@ export function EntityActionsSheet({
             </button>
             <button
               type="button"
-              className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 active:bg-red-500/10"
+              className={cn(
+                "flex w-full items-center gap-3 text-left text-red-400 transition-colors hover:bg-red-500/10 active:bg-red-500/10",
+                sheetItemClass,
+              )}
               onClick={handleDelete}
             >
               <Trash2 className="h-5 w-5" aria-hidden />

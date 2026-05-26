@@ -71,6 +71,52 @@ async function computeBaseCurrencyAmount(
   return { amountInBaseCurrency, exchangeRate };
 }
 
+export async function recalculateStaleBaseCurrencyAmounts(userId: string, baseCurrency: string) {
+  const transactions = await db.transaction.findMany({
+    where: {
+      userId,
+      OR: [{ exchangeRate: null }, { exchangeRate: 1 }],
+    },
+    select: {
+      id: true,
+      type: true,
+      amount: true,
+      fromAccountId: true,
+      toAccountId: true,
+      fromAccount: { select: { currency: true } },
+      toAccount: { select: { currency: true } },
+    },
+  });
+
+  for (const tx of transactions) {
+    const accountCurrency =
+      tx.type === TransactionType.INCOME
+        ? tx.toAccount?.currency
+        : tx.type === TransactionType.EXPENSE
+          ? tx.fromAccount?.currency
+          : tx.fromAccount?.currency ?? tx.toAccount?.currency;
+
+    if (!accountCurrency || accountCurrency === baseCurrency) continue;
+
+    const { amountInBaseCurrency, exchangeRate } = await computeBaseCurrencyAmount(
+      baseCurrency,
+      {
+        type: tx.type,
+        amount: Number(tx.amount),
+        fromAccountId: tx.fromAccountId,
+        toAccountId: tx.toAccountId,
+      },
+    );
+
+    if (exchangeRate && exchangeRate !== 1) {
+      await db.transaction.update({
+        where: { id: tx.id },
+        data: { amountInBaseCurrency, exchangeRate },
+      });
+    }
+  }
+}
+
 export async function getTransactions(filters?: {
   search?: string;
   accountId?: string;

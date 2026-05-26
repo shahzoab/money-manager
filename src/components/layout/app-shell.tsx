@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background">
       <aside className="hidden w-64 flex-col border-r border-border bg-surface lg:flex">
         <div className="flex h-16 items-center border-b border-border px-6">
           <Link href="/dashboard" className="text-lg font-bold tracking-tight">
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
             <Button
@@ -124,18 +124,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }
               mobileTrigger={
                 <Button
-                  size="icon"
-                  className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-lg lg:hidden"
+                  size="lg"
+                  className="h-14 gap-2 rounded-full px-8 shadow-lg"
                   aria-label="Add transaction"
                 >
                   <Plus className="h-6 w-6" />
+                  Add
                 </Button>
               }
             />
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 pb-20 lg:p-6 lg:pb-6">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 pb-44 lg:p-6 lg:pb-6">
           {children}
         </main>
       </div>

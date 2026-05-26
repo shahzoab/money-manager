@@ -34,13 +34,13 @@ export function TransactionFilters() {
             300,
           );
         }}
-        className="flex-1"
+        className="min-w-0 flex-1"
       />
       <Select
         value={searchParams.get("type") ?? "all"}
         onValueChange={(v) => update("type", v === "all" ? "" : v)}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-full sm:w-[140px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -54,7 +54,7 @@ export function TransactionFilters() {
         value={searchParams.get("sort") ?? "date"}
         onValueChange={(v) => update("sort", v)}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-full sm:w-[140px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

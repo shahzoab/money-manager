@@ -59,16 +59,16 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-0 text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-elevated text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Description</th>
+              <th className="px-2 py-3 sm:px-4">Date</th>
+              <th className="px-2 py-3 sm:px-4">Description</th>
               <th className="hidden px-4 py-3 md:table-cell">Category</th>
               <th className="hidden px-4 py-3 sm:table-cell">Account</th>
-              <th className="px-4 py-3 text-right">Amount</th>
-              <th className="px-4 py-3 w-20" />
+              <th className="px-2 py-3 text-right sm:px-4">Amount</th>
+              <th className="hidden px-4 py-3 w-20 sm:table-cell" />
             </tr>
           </thead>
           <tbody>
@@ -78,11 +78,11 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                 className={`cursor-pointer border-b border-border/50 hover:bg-surface-elevated/50 ${i % 2 === 0 ? "bg-surface" : "bg-surface/50"}`}
                 onClick={() => openDetail(tx.id)}
               >
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                <td className="whitespace-nowrap px-2 py-3 tabular-nums text-muted-foreground sm:px-4">
                   {format(new Date(tx.date), showYear ? "MMM d, yyyy" : "MMM d")}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="font-medium">{tx.comment || "—"}</div>
+                <td className="max-w-[120px] truncate px-2 py-3 sm:max-w-none sm:px-4">
+                  <div className="truncate font-medium">{tx.comment || "—"}</div>
                   {tx.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {tx.tags.map(({ tag }) => (
@@ -114,7 +114,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     : tx.fromAccount?.name ?? tx.toAccount?.name ?? "—"}
                 </td>
                 <td
-                  className={`px-4 py-3 text-right font-semibold tabular-nums ${
+                  className={`whitespace-nowrap px-2 py-3 text-right text-sm font-semibold tabular-nums sm:px-4 sm:text-base ${
                     tx.type === TransactionType.INCOME
                       ? "text-accent-secondary"
                       : tx.type === TransactionType.EXPENSE
@@ -125,7 +125,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   {tx.type === TransactionType.INCOME ? "+" : tx.type === TransactionType.EXPENSE ? "-" : ""}
                   {formatMoney(Number(tx.amount), tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency)}
                 </td>
-                <td className="px-4 py-3">
+                <td className="hidden px-4 py-3 sm:table-cell">
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"

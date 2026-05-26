@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ type TransactionFormProps = {
   initialValues?: Partial<TransactionFormValues>;
   submitLabel: string;
   pending: boolean;
+  autoFocusAmount?: boolean;
   onSubmit: (data: TransactionFormSubmitData) => void;
 };
 
@@ -65,8 +66,10 @@ export function TransactionForm({
   initialValues,
   submitLabel,
   pending,
+  autoFocusAmount,
   onSubmit,
 }: TransactionFormProps) {
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const [type, setType] = useState<TransactionType>(
     initialValues?.type ?? emptyValues.type,
   );
@@ -102,17 +105,11 @@ export function TransactionForm({
   }, [mode]);
 
   useEffect(() => {
-    if (initialValues) {
-      setType(initialValues.type ?? TransactionType.EXPENSE);
-      setAmount(initialValues.amount ?? "");
-      setComment(initialValues.comment ?? "");
-      setDate(initialValues.date ?? new Date().toISOString().split("T")[0]);
-      setCategoryId(initialValues.categoryId ?? "");
-      setFromAccountId(initialValues.fromAccountId ?? "");
-      setToAccountId(initialValues.toAccountId ?? "");
-      setPhotoUrl(initialValues.photoUrl ?? "");
+    if (autoFocusAmount) {
+      const timer = setTimeout(() => amountInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
-  }, [initialValues]);
+  }, [autoFocusAmount]);
 
   const filteredCategories = categories.filter((c) =>
     type === TransactionType.INCOME ? c.type === "INCOME" : c.type === "EXPENSE",
@@ -123,6 +120,22 @@ export function TransactionForm({
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0) {
       toast.error("Enter a valid amount");
+      return;
+    }
+
+    if (
+      (type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) &&
+      !fromAccountId
+    ) {
+      toast.error("Select a from account");
+      return;
+    }
+
+    if (
+      (type === TransactionType.INCOME || type === TransactionType.TRANSFER) &&
+      !toAccountId
+    ) {
+      toast.error("Select an account");
       return;
     }
 
@@ -163,9 +176,11 @@ export function TransactionForm({
           <Label>Amount</Label>
           <div className="flex gap-2">
             <Input
+              ref={amountInputRef}
               type="number"
               step="0.01"
               min="0"
+              inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"

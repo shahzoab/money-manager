@@ -7,6 +7,31 @@ export const SUPPORTED_CURRENCIES = [
   "ETH",
 ];
 
+export function formatAmount(
+  amount: number,
+  options?: {
+    decimalSeparator?: DecimalSeparator;
+    roundingMode?: RoundingMode;
+  },
+): string {
+  let value = amount;
+  const mode = options?.roundingMode ?? RoundingMode.NONE;
+
+  if (mode === RoundingMode.NEAREST) value = Math.round(value);
+  else if (mode === RoundingMode.UP) value = Math.ceil(value);
+  else if (mode === RoundingMode.DOWN) value = Math.floor(value);
+
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+  if (options?.decimalSeparator === DecimalSeparator.COMMA) {
+    return formatted.replace(/(\d)\.(\d)/g, "$1,$2");
+  }
+  return formatted;
+}
+
 export function formatMoney(
   amount: number,
   currency: string,

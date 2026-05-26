@@ -28,7 +28,7 @@ export function PeriodSelector({ period }: { period: string }) {
 
   return (
     <Select value={period} onValueChange={onChange}>
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className="w-full sm:w-[140px]">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

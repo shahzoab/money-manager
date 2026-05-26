@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import {
@@ -11,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
 import { createTransaction } from "@/actions/transactions";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { toast } from "sonner";
@@ -21,14 +21,6 @@ type AddTransactionDialogProps = {
   defaultType?: TransactionType;
 };
 
-function useIsClient() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
-}
-
 export function AddTransactionDialog({
   trigger,
   mobileTrigger,
@@ -36,7 +28,6 @@ export function AddTransactionDialog({
 }: AddTransactionDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const isClient = useIsClient();
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -52,25 +43,25 @@ export function AddTransactionDialog({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const mobileTriggerNode = mobileTrigger ? (
-    <DialogTrigger asChild>{mobileTrigger}</DialogTrigger>
-  ) : null;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      {isClient && mobileTriggerNode
-        ? createPortal(mobileTriggerNode, document.body)
-        : null}
+      {mobileTrigger ? (
+        <MobileBottomBar
+          addButton={<DialogTrigger asChild>{mobileTrigger}</DialogTrigger>}
+        />
+      ) : null}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
         </DialogHeader>
 
         <TransactionForm
+          key={open ? "open" : "closed"}
           mode="create"
           submitLabel="Save Transaction"
           pending={pending}
+          autoFocusAmount={open}
           initialValues={{ type: defaultType ?? TransactionType.EXPENSE }}
           onSubmit={(data) => {
             startTransition(async () => {

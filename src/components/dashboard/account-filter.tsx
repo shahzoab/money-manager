@@ -37,7 +37,7 @@ export function AccountFilter({
 
   return (
     <Select value={selected ?? "all"} onValueChange={onChange}>
-      <SelectTrigger className="w-[160px]">
+      <SelectTrigger className="w-full sm:w-[160px]">
         <SelectValue placeholder="All accounts" />
       </SelectTrigger>
       <SelectContent>

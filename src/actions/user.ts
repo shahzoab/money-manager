@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
+import { recalculateStaleBaseCurrencyAmounts } from "@/actions/transactions";
+import { db } from "@/lib/db";
 import {
   seedDefaultCategories,
   seedDefaultWalletAccount,
@@ -15,6 +17,10 @@ export async function initializeUserData() {
   await ensureUserSettings(userId);
   await seedDefaultCategories(userId);
   await seedDefaultWalletAccount(userId);
+
+  const settings = await db.userSettings.findUnique({ where: { userId } });
+  const baseCurrency = settings?.defaultCurrency ?? "USD";
+  await recalculateStaleBaseCurrencyAmounts(userId, baseCurrency);
 }
 
 export async function updateProfile(data: { name?: string; image?: string }) {

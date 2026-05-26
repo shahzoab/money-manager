@@ -1,16 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { formatMoney } from "@/lib/currency-format";
+import { formatAmount } from "@/lib/currency-format";
 import { cn } from "@/lib/utils";
 
 type KpiCardProps = {
   label: string;
   value: number;
-  currency: string;
   valueClassName?: string;
 };
 
-export function KpiCard({ label, value, currency, valueClassName }: KpiCardProps) {
-  const formatted = formatMoney(value, currency);
+export function KpiCard({ label, value, valueClassName }: KpiCardProps) {
+  const formatted = formatAmount(value);
 
   return (
     <Card className="min-w-0 border-border/60 bg-surface">
@@ -32,29 +31,25 @@ type KpiGridProps = {
   income: number;
   expenses: number;
   netFlow: number;
-  currency: string;
 };
 
-export function KpiGrid({ totalBalance, income, expenses, netFlow, currency }: KpiGridProps) {
+export function KpiGrid({ totalBalance, income, expenses, netFlow }: KpiGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <KpiCard
         label="Total Balance"
         value={totalBalance}
-        currency={currency}
         valueClassName="text-accent"
       />
       <KpiCard
         label="Income"
         value={income}
-        currency={currency}
         valueClassName="text-accent-secondary"
       />
-      <KpiCard label="Expenses" value={expenses} currency={currency} />
+      <KpiCard label="Expenses" value={expenses} />
       <KpiCard
         label="Net Flow"
         value={netFlow}
-        currency={currency}
         valueClassName={netFlow >= 0 ? "text-accent-secondary" : "text-red-400"}
       />
     </div>

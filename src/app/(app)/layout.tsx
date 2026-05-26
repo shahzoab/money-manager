@@ -3,7 +3,6 @@ import { getSession } from "@/lib/auth-server";
 import { initializeUserData } from "@/actions/user";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLockProvider } from "@/components/security/app-lock";
-import { PwaInstallPrompt } from "@/components/pwa/install-prompt";
 import { getSettings } from "@/actions/recurring";
 import { getDashboardData } from "@/actions/dashboard";
 import { OfflineSync } from "@/components/offline/offline-sync";
@@ -53,7 +52,6 @@ export default async function AppLayout({
         }))}
       />
       <AppShell>{children}</AppShell>
-      <PwaInstallPrompt />
     </AppLockProvider>
   );
 }

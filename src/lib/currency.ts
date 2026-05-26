@@ -1,8 +1,18 @@
 import { db } from "@/lib/db";
 
-const FRANKFURTER_URL = "https://api.frankfurter.app/latest";
+const FRANKFURTER_V2_URL = "https://api.frankfurter.dev/v2/rate";
 
 export { SUPPORTED_CURRENCIES, formatMoney } from "@/lib/currency-format";
+
+async function fetchRateFromApi(from: string, to: string): Promise<number> {
+  const res = await fetch(`${FRANKFURTER_V2_URL}/${from}/${to}`, {
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error("Rate fetch failed");
+  const data = (await res.json()) as { rate: number };
+  if (!data.rate) throw new Error("Rate not found");
+  return data.rate;
+}
 
 export async function getExchangeRate(
   from: string,
@@ -20,13 +30,7 @@ export async function getExchangeRate(
   }
 
   try {
-    const res = await fetch(`${FRANKFURTER_URL}?from=${from}&to=${to}`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) throw new Error("Rate fetch failed");
-    const data = (await res.json()) as { rates: Record<string, number> };
-    const rate = data.rates[to];
-    if (!rate) throw new Error("Rate not found");
+    const rate = await fetchRateFromApi(from, to);
 
     await db.exchangeRate.create({
       data: { base: from, target: to, rate },

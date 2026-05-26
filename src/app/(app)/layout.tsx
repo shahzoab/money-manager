@@ -52,7 +52,9 @@ export default async function AppLayout({
           toAccountId: t.toAccountId,
         }))}
       />
-      <AppShell>{children}</AppShell>
+      <AppShell totalBalance={dashData.totalBalance}>
+        {children}
+      </AppShell>
     </AppLockProvider>
   );
 }

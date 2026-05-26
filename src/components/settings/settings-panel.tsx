@@ -19,13 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 import { updateSettings, createTag, updateTag, deleteTag } from "@/actions/recurring";
 import { updateProfile } from "@/actions/user";
 import { recalculateBalances } from "@/actions/accounts";
@@ -33,6 +27,28 @@ import { hashPin } from "@/lib/app-lock";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency-format";
 import { toast } from "sonner";
 import { Download, Upload, LogOut, RefreshCw, Bell } from "lucide-react";
+
+const currencyOptions = SUPPORTED_CURRENCIES.map((c) => ({ value: c, label: c }));
+
+const decimalSeparatorOptions = [
+  { value: DecimalSeparator.DOT, label: "Dot (1,234.56)" },
+  { value: DecimalSeparator.COMMA, label: "Comma (1.234,56)" },
+];
+
+const roundingOptions = Object.values(RoundingMode).map((m) => ({ value: m, label: m }));
+
+const firstDayOfWeekOptions = [
+  { value: "0", label: "Sunday" },
+  { value: "1", label: "Monday" },
+  { value: "6", label: "Saturday" },
+];
+
+const homePeriodOptions = [
+  { value: "day", label: "Day" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+  { value: "year", label: "Year" },
+];
 
 type Settings = {
   defaultCurrency: string;
@@ -147,73 +163,53 @@ export function SettingsPanel({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Default Currency</Label>
-            <Select
-              defaultValue={settings?.defaultCurrency ?? "USD"}
+            <PickerField
+              value={settings?.defaultCurrency ?? "USD"}
               onValueChange={(v) => saveSettings({ defaultCurrency: v })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={currencyOptions}
+              placeholder="Select currency"
+              title="Default currency"
+            />
           </div>
           <div className="space-y-2">
             <Label>Decimal Separator</Label>
-            <Select
-              defaultValue={settings?.decimalSeparator ?? DecimalSeparator.DOT}
+            <PickerField
+              value={settings?.decimalSeparator ?? DecimalSeparator.DOT}
               onValueChange={(v) => saveSettings({ decimalSeparator: v as DecimalSeparator })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DecimalSeparator.DOT}>Dot (1,234.56)</SelectItem>
-                <SelectItem value={DecimalSeparator.COMMA}>Comma (1.234,56)</SelectItem>
-              </SelectContent>
-            </Select>
+              options={decimalSeparatorOptions}
+              placeholder="Select separator"
+              title="Decimal separator"
+            />
           </div>
           <div className="space-y-2">
             <Label>Rounding</Label>
-            <Select
-              defaultValue={settings?.roundingMode ?? RoundingMode.NONE}
+            <PickerField
+              value={settings?.roundingMode ?? RoundingMode.NONE}
               onValueChange={(v) => saveSettings({ roundingMode: v as RoundingMode })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.values(RoundingMode).map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={roundingOptions}
+              placeholder="Select rounding"
+              title="Rounding mode"
+            />
           </div>
           <div className="space-y-2">
             <Label>First Day of Week</Label>
-            <Select
-              defaultValue={String(settings?.firstDayOfWeek ?? 1)}
+            <PickerField
+              value={String(settings?.firstDayOfWeek ?? 1)}
               onValueChange={(v) => saveSettings({ firstDayOfWeek: parseInt(v) })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Sunday</SelectItem>
-                <SelectItem value="1">Monday</SelectItem>
-                <SelectItem value="6">Saturday</SelectItem>
-              </SelectContent>
-            </Select>
+              options={firstDayOfWeekOptions}
+              placeholder="Select day"
+              title="First day of week"
+            />
           </div>
           <div className="space-y-2">
             <Label>Home Period</Label>
-            <Select
-              defaultValue={settings?.homePeriod ?? "month"}
+            <PickerField
+              value={settings?.homePeriod ?? "month"}
               onValueChange={(v) => saveSettings({ homePeriod: v })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="day">Day</SelectItem>
-                <SelectItem value="week">Week</SelectItem>
-                <SelectItem value="month">Month</SelectItem>
-                <SelectItem value="year">Year</SelectItem>
-              </SelectContent>
-            </Select>
+              options={homePeriodOptions}
+              placeholder="Select period"
+              title="Home period"
+            />
           </div>
         </CardContent>
       </Card>

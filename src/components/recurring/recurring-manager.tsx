@@ -18,20 +18,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 import {
   createRecurringPayment,
   deleteRecurringPayment,
   processDueRecurringPayments,
 } from "@/actions/recurring";
 import { formatMoney } from "@/lib/currency-format";
+import { filterFieldClass } from "@/lib/form-field-styles";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const recurringTypeOptions = [
+  { value: TransactionType.EXPENSE, label: "Expense" },
+  { value: TransactionType.INCOME, label: "Income" },
+];
+
+const frequencyOptions = Object.values(RecurringFrequency).map((f) => ({
+  value: f,
+  label: f,
+}));
 
 type Payment = {
   id: string;
@@ -95,11 +101,11 @@ export function RecurringManager({
   return (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative min-w-0 flex-1 sm:max-w-xs">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground lg:left-3 lg:h-4 lg:w-4" />
           <Input
             placeholder="Search recurring..."
-            className="pl-9"
+            className={cn("pl-12 lg:pl-9", filterFieldClass)}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -130,16 +136,13 @@ export function RecurringManager({
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <Select
+                  <PickerField
                     value={form.type}
                     onValueChange={(v) => setForm({ ...form, type: v as TransactionType })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={TransactionType.EXPENSE}>Expense</SelectItem>
-                      <SelectItem value={TransactionType.INCOME}>Income</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={recurringTypeOptions}
+                    placeholder="Select type"
+                    title="Select type"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Amount</Label>
@@ -153,17 +156,13 @@ export function RecurringManager({
                 </div>
                 <div className="space-y-2">
                   <Label>Frequency</Label>
-                  <Select
+                  <PickerField
                     value={form.frequency}
                     onValueChange={(v) => setForm({ ...form, frequency: v as RecurringFrequency })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.values(RecurringFrequency).map((f) => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={frequencyOptions}
+                    placeholder="Select frequency"
+                    title="Select frequency"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Next Due Date</Label>

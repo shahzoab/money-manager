@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
 import { generateExcelExport } from "@/lib/export/excel";
 import { generatePdfExport } from "@/lib/export/pdf";
-import { getDashboardData } from "@/actions/dashboard";
+import { getChartData, getDashboardData } from "@/actions/dashboard";
 
 export async function GET(
   request: Request,
@@ -23,17 +23,23 @@ export async function GET(
   }
 
   if (format === "pdf") {
-    const data = await getDashboardData();
+    const [data, chartData] = await Promise.all([
+      getDashboardData(),
+      getChartData(),
+    ]);
     const buffer = await generatePdfExport({
       period: data.period,
       totalBalance: data.totalBalance,
       income: data.income,
       expenses: data.expenses,
       currency: data.baseCurrency,
-      categories: data.categoryData.map((c) => ({
-        name: c.name,
-        amount: c.amount,
-      })),
+      categories: chartData.categoryChart
+        .filter((c) => c.amount > 0)
+        .slice(0, 8)
+        .map((c) => ({
+          name: c.name,
+          amount: c.amount,
+        })),
     });
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

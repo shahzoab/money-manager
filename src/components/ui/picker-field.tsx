@@ -31,6 +31,7 @@ type PickerFieldProps = {
   title: string;
   emptyMessage?: string;
   disabled?: boolean;
+  triggerClassName?: string;
 };
 
 function PickerTrigger({
@@ -38,11 +39,13 @@ function PickerTrigger({
   placeholder,
   disabled,
   onClick,
+  className,
 }: {
   selectedLabel: React.ReactNode | null;
   placeholder: string;
   disabled?: boolean;
   onClick?: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -51,6 +54,7 @@ function PickerTrigger({
       onClick={onClick}
       className={cn(
         "flex min-h-14 w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
+        className,
       )}
     >
       <span className={cn("truncate pr-2", !selectedLabel && "text-muted-foreground")}>
@@ -142,6 +146,7 @@ export function PickerField({
   title,
   emptyMessage,
   disabled,
+  triggerClassName,
 }: PickerFieldProps) {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -156,6 +161,7 @@ export function PickerField({
           selectedLabel={selectedLabel}
           placeholder={placeholder}
           disabled={disabled}
+          className={triggerClassName}
           onClick={() => !disabled && setSheetOpen(true)}
         />
         <MobilePickerSheet
@@ -173,7 +179,7 @@ export function PickerField({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger>
+      <SelectTrigger className={triggerClassName}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

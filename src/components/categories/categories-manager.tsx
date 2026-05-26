@@ -16,13 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { CategoriesReorderSheet } from "@/components/categories/categories-reorder-sheet";
 import { EntityIcon } from "@/components/ui/entity-icon";
@@ -30,6 +24,11 @@ import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { CATEGORY_ICONS } from "@/lib/icon-map";
 import { toast } from "sonner";
+
+const categoryTypeOptions = [
+  { value: CategoryType.EXPENSE, label: "Expense" },
+  { value: CategoryType.INCOME, label: "Income" },
+];
 
 type Category = {
   id: string;
@@ -188,13 +187,13 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as CategoryType })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={CategoryType.EXPENSE}>Expense</SelectItem>
-                      <SelectItem value={CategoryType.INCOME}>Income</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <PickerField
+                    value={form.type}
+                    onValueChange={(v) => setForm({ ...form, type: v as CategoryType })}
+                    options={categoryTypeOptions}
+                    placeholder="Select type"
+                    title="Select type"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Color</Label>
@@ -259,18 +258,18 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
         <p className="text-sm text-muted-foreground">
           Reassign transactions to another category (optional):
         </p>
-        <Select
+        <PickerField
           value={reassignToId ?? "none"}
           onValueChange={(v) => setReassignToId(v === "none" ? undefined : v)}
-        >
-          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Don&apos;t reassign</SelectItem>
-            {categories.filter((c) => c.id !== reassignId).map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={[
+            { value: "none", label: "Don't reassign" },
+            ...categories
+              .filter((c) => c.id !== reassignId)
+              .map((c) => ({ value: c.id, label: c.name })),
+          ]}
+          placeholder="Select category"
+          title="Reassign transactions"
+        />
       </ConfirmDialog>
 
       <CategoriesReorderSheet

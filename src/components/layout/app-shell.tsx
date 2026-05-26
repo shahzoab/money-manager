@@ -17,8 +17,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { SyncStatusIndicator } from "@/components/layout/sync-status";
 import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
+import { RoundingMode } from "@/generated/prisma/enums";
+import { formatAmount } from "@/lib/currency-format";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -74,7 +75,13 @@ function shouldHideFab(pathname: string) {
   return false;
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  totalBalance,
+}: {
+  children: React.ReactNode;
+  totalBalance?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
@@ -143,7 +150,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
-            <SyncStatusIndicator />
+            {totalBalance !== undefined && (
+              <div className="text-right">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Total
+                </p>
+                <p className="text-xl font-semibold tabular-nums text-accent">
+                  {formatAmount(totalBalance, {
+                    fractionDigits: 0,
+                    roundingMode: RoundingMode.NEAREST,
+                  })}
+                </p>
+              </div>
+            )}
             <Button size="sm" className="max-lg:hidden gap-1.5" asChild>
               <Link href="/transactions/new">
                 <Plus className="h-4 w-4" />

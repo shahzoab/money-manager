@@ -1,14 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EntityIcon } from "@/components/ui/entity-icon";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 
 type Account = {
   id: string;
@@ -28,6 +23,22 @@ export function AccountFilter({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const options = useMemo(
+    () => [
+      { value: "all", label: "All accounts" },
+      ...accounts.map((a) => ({
+        value: a.id,
+        label: (
+          <span className="flex items-center gap-2">
+            <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
+            {a.name}
+          </span>
+        ),
+      })),
+    ],
+    [accounts],
+  );
+
   function onChange(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     if (value === "all") {
@@ -39,21 +50,13 @@ export function AccountFilter({
   }
 
   return (
-    <Select value={selected ?? "all"} onValueChange={onChange}>
-      <SelectTrigger className="w-full sm:w-[160px]">
-        <SelectValue placeholder="All accounts" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All accounts</SelectItem>
-        {accounts.map((a) => (
-          <SelectItem key={a.id} value={a.id}>
-            <span className="flex items-center gap-2">
-              <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
-              {a.name}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <PickerField
+      value={selected ?? "all"}
+      onValueChange={onChange}
+      options={options}
+      placeholder="All accounts"
+      title="Select account"
+      triggerClassName="w-full sm:w-[160px]"
+    />
   );
 }

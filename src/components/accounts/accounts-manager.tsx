@@ -15,13 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
 import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
 import { EntityIcon } from "@/components/ui/entity-icon";
@@ -31,6 +25,8 @@ import { formatMoney, SUPPORTED_CURRENCIES } from "@/lib/currency-format";
 import { ACCOUNT_ICONS } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const currencyOptions = SUPPORTED_CURRENCIES.map((c) => ({ value: c, label: c }));
 
 type Account = {
   id: string;
@@ -219,19 +215,13 @@ export function AccountsManager({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Currency</Label>
-                  <Select
+                  <PickerField
                     value={form.currency}
                     onValueChange={(v) => setForm({ ...form, currency: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={currencyOptions}
+                    placeholder="Select currency"
+                    title="Select currency"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Color</Label>

@@ -1,4 +1,4 @@
-import { getChartData, getDashboardData } from "@/actions/dashboard";
+import { getChartData } from "@/actions/dashboard";
 import {
   CategoryBarChart,
   BudgetProgress
@@ -18,10 +18,7 @@ export default async function ChartsPage({
     | "week"
     | "month"
     | "year";
-  const [chartData, dashData] = await Promise.all([
-    getChartData({ period }),
-    getDashboardData({ period })
-  ]);
+  const chartData = await getChartData({ period });
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
@@ -68,7 +65,7 @@ export default async function ChartsPage({
           </CardHeader>
           <CardContent>
             <TrendChart
-              data={dashData.trendData}
+              data={chartData.trendData}
               currency={chartData.baseCurrency}
             />
           </CardContent>

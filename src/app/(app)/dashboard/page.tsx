@@ -1,8 +1,9 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { getDashboardData } from "@/actions/dashboard";
-import { KpiGrid } from "@/components/dashboard/kpi-cards";
-import { TrendChart } from "@/components/dashboard/trend-chart";
-import { CategoryBarChart } from "@/components/charts/category-charts";
+import { TransactionSummaryCards } from "@/components/transactions/transaction-summary-cards";
 import { TransactionList } from "@/components/transactions/transaction-list";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { AccountFilter } from "@/components/dashboard/account-filter";
@@ -17,6 +18,14 @@ export default async function DashboardPage({
     period: params.period as "day" | "week" | "month" | "year" | undefined,
     accountId: params.account,
   });
+
+  const transactionsQuery = new URLSearchParams();
+  if (data.period) transactionsQuery.set("period", data.period);
+  if (params.account) transactionsQuery.set("account", params.account);
+  const transactionsHref =
+    transactionsQuery.size > 0
+      ? `/transactions?${transactionsQuery.toString()}`
+      : "/transactions";
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
@@ -33,36 +42,22 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <KpiGrid
-        totalBalance={data.totalBalance}
+      <TransactionSummaryCards
         income={data.income}
         expenses={data.expenses}
-        netFlow={data.netFlow}
+        transfers={data.transfers}
+        net={data.net}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-border/60 bg-surface">
-          <CardHeader>
-            <CardTitle className="text-base">Cash Flow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TrendChart data={data.trendData} currency={data.baseCurrency} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 bg-surface">
-          <CardHeader>
-            <CardTitle className="text-base">Top Categories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CategoryBarChart data={data.categoryData} />
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-border/60 bg-surface">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Recent Transactions</CardTitle>
+          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" asChild>
+            <Link href={transactionsHref}>
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent className="p-0 pb-2">
           <TransactionList

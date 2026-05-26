@@ -45,85 +45,37 @@ export async function getDashboardData(options?: {
     tags: { include: { tag: true } },
   } as const;
 
-  const [totalBalance, aggregates, chartTransactions, recentTransactions, accounts] =
-    await Promise.all([
-      getTotalBalanceInCurrency(userId, baseCurrency),
-      db.transaction.groupBy({
-        by: ["type"],
-        where,
-        _sum: { amountInBaseCurrency: true },
-      }),
-      db.transaction.findMany({
-        where,
-        include: { category: true },
-      }),
-      db.transaction.findMany({
-        where,
-        include: transactionInclude,
-        orderBy: { date: "desc" },
-        take: 20,
-      }),
-      db.walletAccount.findMany({
-        where: { userId, isHidden: false, ...activeWalletAccountWhere },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      }),
-    ]);
+  const [totalBalance, aggregates, recentTransactions, accounts] = await Promise.all([
+    getTotalBalanceInCurrency(userId, baseCurrency),
+    db.transaction.groupBy({
+      by: ["type"],
+      where,
+      _sum: { amountInBaseCurrency: true },
+    }),
+    db.transaction.findMany({
+      where,
+      include: transactionInclude,
+      orderBy: { date: "desc" },
+      take: 20,
+    }),
+    db.walletAccount.findMany({
+      where: { userId, isHidden: false, ...activeWalletAccountWhere },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
 
-  const { income, expenses, net: netFlow } = buildTransactionSummary(aggregates);
-  const categoryTotals: Record<string, { name: string; color: string; icon: string; amount: number }> = {};
-  const dailyTotals: Record<string, { income: number; expense: number }> = {};
-
-  for (const tx of chartTransactions) {
-    const amount = Number(tx.amountInBaseCurrency);
-    const dateKey = tx.date.toISOString().split("T")[0];
-
-    if (!dailyTotals[dateKey]) {
-      dailyTotals[dateKey] = { income: 0, expense: 0 };
-    }
-
-    if (tx.type === TransactionType.INCOME) {
-      dailyTotals[dateKey].income += amount;
-    } else if (tx.type === TransactionType.EXPENSE) {
-      dailyTotals[dateKey].expense += amount;
-      if (tx.category) {
-        const key = tx.category.id;
-        if (!categoryTotals[key]) {
-          categoryTotals[key] = {
-            name: tx.category.name,
-            color: tx.category.color,
-            icon: tx.category.icon,
-            amount: 0,
-          };
-        }
-        categoryTotals[key].amount += amount;
-      }
-    }
-  }
-
-  const trendData = Object.entries(dailyTotals)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, vals]) => ({
-      date,
-      income: vals.income,
-      expense: vals.expense,
-      net: vals.income - vals.expense,
-    }));
-
-  const categoryData = Object.values(categoryTotals)
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 8);
+  const summary = buildTransactionSummary(aggregates);
 
   return {
     totalBalance,
-    income,
-    expenses,
-    netFlow,
+    income: summary.income,
+    expenses: summary.expenses,
+    transfers: summary.transfers,
+    net: summary.net,
     baseCurrency,
     period,
     transactions: recentTransactions.map(serializeTransaction),
     accounts: accounts.map(serializeAccount),
-    trendData,
-    categoryData,
     settings,
   };
 }
@@ -164,18 +116,38 @@ export async function getChartData(options?: {
   ]);
 
   const byCategory: Record<string, number> = {};
+  const dailyTotals: Record<string, { income: number; expense: number }> = {};
   let totalIncome = 0;
   let totalExpense = 0;
 
   for (const tx of transactions) {
     const amount = Number(tx.amountInBaseCurrency);
-    if (tx.type === TransactionType.INCOME) totalIncome += amount;
+    const dateKey = tx.date.toISOString().split("T")[0];
+
+    if (!dailyTotals[dateKey]) {
+      dailyTotals[dateKey] = { income: 0, expense: 0 };
+    }
+
+    if (tx.type === TransactionType.INCOME) {
+      totalIncome += amount;
+      dailyTotals[dateKey].income += amount;
+    }
     if (tx.type === TransactionType.EXPENSE) {
       totalExpense += amount;
+      dailyTotals[dateKey].expense += amount;
       const catId = tx.categoryId ?? "uncategorized";
       byCategory[catId] = (byCategory[catId] ?? 0) + amount;
     }
   }
+
+  const trendData = Object.entries(dailyTotals)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vals]) => ({
+      date,
+      income: vals.income,
+      expense: vals.expense,
+      net: vals.income - vals.expense,
+    }));
 
   const categoryChart = categories
     .filter((c) => c.type === "EXPENSE")
@@ -195,6 +167,7 @@ export async function getChartData(options?: {
     totalExpense,
     net: totalIncome - totalExpense,
     categoryChart,
+    trendData,
     baseCurrency: settings?.defaultCurrency ?? "USD",
   };
 }

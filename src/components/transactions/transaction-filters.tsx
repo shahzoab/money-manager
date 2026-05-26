@@ -1,16 +1,39 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { AccountFilter } from "@/components/dashboard/account-filter";
+import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
+import { filterFieldClass } from "@/lib/form-field-styles";
 
-export function TransactionFilters() {
+const typeOptions = [
+  { value: "all", label: "All types" },
+  { value: "income", label: "Income" },
+  { value: "expense", label: "Expense" },
+  { value: "transfer", label: "Transfer" },
+];
+
+const sortOptions = [
+  { value: "date", label: "Sort by Date" },
+  { value: "amount", label: "Sort by Amount" },
+];
+
+type Account = {
+  id: string;
+  name: string;
+  currency: string;
+  color: string;
+  icon: string;
+};
+
+export function TransactionFilters({
+  accounts,
+  period,
+}: {
+  accounts: Account[];
+  period: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -22,7 +45,7 @@ export function TransactionFilters() {
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <div className="flex flex-col gap-3">
       <Input
         placeholder="Search by comment or category..."
         defaultValue={searchParams.get("search") ?? ""}
@@ -34,34 +57,31 @@ export function TransactionFilters() {
             300,
           );
         }}
-        className="min-w-0 flex-1"
+        className={filterFieldClass}
       />
-      <Select
-        value={searchParams.get("type") ?? "all"}
-        onValueChange={(v) => update("type", v === "all" ? "" : v)}
-      >
-        <SelectTrigger className="w-full sm:w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          <SelectItem value="income">Income</SelectItem>
-          <SelectItem value="expense">Expense</SelectItem>
-          <SelectItem value="transfer">Transfer</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select
-        value={searchParams.get("sort") ?? "date"}
-        onValueChange={(v) => update("sort", v)}
-      >
-        <SelectTrigger className="w-full sm:w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="date">Sort by Date</SelectItem>
-          <SelectItem value="amount">Sort by Amount</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <AccountFilter
+          accounts={accounts}
+          selected={searchParams.get("account") ?? undefined}
+        />
+        <PeriodSelector period={period} />
+        <PickerField
+          value={searchParams.get("type") ?? "all"}
+          onValueChange={(v) => update("type", v === "all" ? "" : v)}
+          options={typeOptions}
+          placeholder="All types"
+          title="Filter by type"
+          triggerClassName="w-full sm:w-[140px]"
+        />
+        <PickerField
+          value={searchParams.get("sort") ?? "date"}
+          onValueChange={(v) => update("sort", v)}
+          options={sortOptions}
+          placeholder="Sort by Date"
+          title="Sort transactions"
+          triggerClassName="w-full sm:w-[140px]"
+        />
+      </div>
     </div>
   );
 }

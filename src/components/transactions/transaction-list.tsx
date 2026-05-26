@@ -38,7 +38,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
 
   if (transactions.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted-foreground">
+      <div className="py-12 text-center text-base text-muted-foreground lg:text-sm">
         No transactions yet.{" "}
         <Link href="/transactions/new" className="text-accent hover:underline">
           Add one
@@ -51,15 +51,15 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
   return (
     <>
       <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-0 text-sm">
+        <table className="w-full min-w-0 text-lg lg:text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-elevated text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="px-2 py-3 sm:px-4">Date</th>
-              <th className="px-2 py-3 sm:px-4">Description</th>
-              <th className="hidden px-4 py-3 md:table-cell">Category</th>
-              <th className="hidden px-4 py-3 sm:table-cell">Account</th>
-              <th className="px-2 py-3 text-right sm:px-4">Amount</th>
-              <th className="hidden px-4 py-3 w-20 sm:table-cell" />
+            <tr className="border-b border-border bg-surface-elevated text-left text-sm uppercase tracking-wider text-muted-foreground lg:text-xs">
+              <th className="px-3 py-4 sm:px-4 lg:py-3">Date</th>
+              <th className="px-3 py-4 sm:px-4 lg:py-3">Description</th>
+              <th className="hidden px-4 py-4 md:table-cell lg:py-3">Category</th>
+              <th className="hidden px-4 py-4 sm:table-cell lg:py-3">Account</th>
+              <th className="px-3 py-4 text-right sm:px-4 lg:py-3">Amount</th>
+              <th className="hidden w-20 px-4 py-4 sm:table-cell lg:py-3" />
             </tr>
           </thead>
           <tbody>
@@ -69,17 +69,17 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                 className={`cursor-pointer border-b border-border/50 transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated ${i % 2 === 0 ? "bg-surface" : "bg-surface/50"}`}
                 onClick={() => router.push(`/transactions/${tx.id}`)}
               >
-                <td className="whitespace-nowrap px-2 py-3 tabular-nums text-muted-foreground sm:px-4">
+                <td className="whitespace-nowrap px-3 py-4 tabular-nums text-muted-foreground sm:px-4 lg:py-3">
                   {format(new Date(tx.date), showYear ? "MMM d, yyyy" : "MMM d")}
                 </td>
-                <td className="max-w-[120px] truncate px-2 py-3 sm:max-w-none sm:px-4">
+                <td className="max-w-[120px] truncate px-3 py-4 sm:max-w-none sm:px-4 lg:py-3">
                   <div className="truncate font-medium">{tx.comment || "—"}</div>
                   {tx.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {tx.tags.map(({ tag }) => (
                         <span
                           key={tag.name}
-                          className="rounded px-1.5 py-0.5 text-[10px]"
+                          className="rounded px-1.5 py-0.5 text-xs lg:text-[10px]"
                           style={{ background: `${tag.color}22`, color: tag.color }}
                         >
                           {tag.name}
@@ -88,7 +88,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     </div>
                   )}
                 </td>
-                <td className="hidden px-4 py-3 md:table-cell">
+                <td className="hidden px-4 py-4 md:table-cell lg:py-3">
                   {tx.category && (
                     <span className="flex items-center gap-1.5">
                       <EntityIcon icon={tx.category.icon} color={tx.category.color} size="sm" />
@@ -96,13 +96,13 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     </span>
                   )}
                 </td>
-                <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
+                <td className="hidden px-4 py-4 text-muted-foreground sm:table-cell lg:py-3">
                   {tx.type === TransactionType.TRANSFER
                     ? `${tx.fromAccount?.name} → ${tx.toAccount?.name}`
                     : tx.fromAccount?.name ?? tx.toAccount?.name ?? "—"}
                 </td>
                 <td
-                  className={`whitespace-nowrap px-2 py-3 text-right text-sm font-semibold tabular-nums sm:px-4 sm:text-base ${
+                  className={`whitespace-nowrap px-3 py-4 text-right text-lg font-semibold tabular-nums sm:px-4 lg:py-3 lg:text-base ${
                     tx.type === TransactionType.INCOME
                       ? "text-accent-secondary"
                       : tx.type === TransactionType.EXPENSE
@@ -113,7 +113,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   {tx.type === TransactionType.INCOME ? "+" : tx.type === TransactionType.EXPENSE ? "-" : ""}
                   {formatMoney(Number(tx.amount), tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency)}
                 </td>
-                <td className="hidden px-4 py-3 sm:table-cell">
+                <td className="hidden px-4 py-4 sm:table-cell lg:py-3">
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"

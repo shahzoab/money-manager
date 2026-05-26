@@ -12,18 +12,20 @@ export function formatAmount(
   options?: {
     decimalSeparator?: DecimalSeparator;
     roundingMode?: RoundingMode;
+    fractionDigits?: number;
   },
 ): string {
   let value = amount;
   const mode = options?.roundingMode ?? RoundingMode.NONE;
+  const fractionDigits = options?.fractionDigits ?? 2;
 
   if (mode === RoundingMode.NEAREST) value = Math.round(value);
   else if (mode === RoundingMode.UP) value = Math.ceil(value);
   else if (mode === RoundingMode.DOWN) value = Math.floor(value);
 
   const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(value);
 
   if (options?.decimalSeparator === DecimalSeparator.COMMA) {

@@ -1,13 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 
 const periods = [
   { value: "day", label: "Today" },
@@ -27,17 +21,13 @@ export function PeriodSelector({ period }: { period: string }) {
   }
 
   return (
-    <Select value={period} onValueChange={onChange}>
-      <SelectTrigger className="w-full sm:w-[140px]">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {periods.map((p) => (
-          <SelectItem key={p.value} value={p.value}>
-            {p.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <PickerField
+      value={period}
+      onValueChange={onChange}
+      options={periods}
+      placeholder="Select period"
+      title="Select period"
+      triggerClassName="w-full sm:w-[140px]"
+    />
   );
 }

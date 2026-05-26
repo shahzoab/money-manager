@@ -12,6 +12,7 @@ type Category = {
   id: string;
   name: string;
   color: string;
+  icon: string;
 };
 
 type CategoriesReorderSheetProps = {
@@ -38,6 +39,7 @@ export function CategoriesReorderSheet({
     id: category.id,
     label: category.name,
     color: category.color,
+    icon: category.icon,
   }));
 
   async function handleSave(orderedIds: string[]) {

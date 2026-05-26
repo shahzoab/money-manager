@@ -26,12 +26,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import { cn } from "@/lib/utils";
 
 export type ReorderItem = {
   id: string;
   label: string;
   color?: string;
+  icon?: string;
+  iconFallback?: "tag" | "wallet";
   badge?: string;
 };
 
@@ -84,12 +87,19 @@ function SortableRow({
         <GripVertical className="h-4 w-4" />
       </button>
 
-      {item.color && (
+      {item.icon && item.color ? (
+        <EntityIcon
+          icon={item.icon}
+          color={item.color}
+          size="sm"
+          fallback={item.iconFallback}
+        />
+      ) : item.color ? (
         <div
           className="h-6 w-6 shrink-0 rounded-md"
           style={{ background: item.color }}
         />
-      )}
+      ) : null}
 
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>
 

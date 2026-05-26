@@ -70,7 +70,7 @@ export async function getDashboardData(options?: {
     ]);
 
   const { income, expenses, net: netFlow } = buildTransactionSummary(aggregates);
-  const categoryTotals: Record<string, { name: string; color: string; amount: number }> = {};
+  const categoryTotals: Record<string, { name: string; color: string; icon: string; amount: number }> = {};
   const dailyTotals: Record<string, { income: number; expense: number }> = {};
 
   for (const tx of chartTransactions) {
@@ -91,6 +91,7 @@ export async function getDashboardData(options?: {
           categoryTotals[key] = {
             name: tx.category.name,
             color: tx.category.color,
+            icon: tx.category.icon,
             amount: 0,
           };
         }
@@ -182,6 +183,7 @@ export async function getChartData(options?: {
       id: c.id,
       name: c.name,
       color: c.color,
+      icon: c.icon,
       amount: byCategory[c.id] ?? 0,
       limit: c.monthlyLimit ? Number(c.monthlyLimit) : null,
     }))

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, ArrowUpDown } from "lucide-react";
 import { CategoryType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/select";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { CategoriesReorderSheet } from "@/components/categories/categories-reorder-sheet";
+import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
+import { IconPicker } from "@/components/ui/icon-picker";
+import { CATEGORY_ICONS } from "@/lib/icon-map";
 import { toast } from "sonner";
 
 type Category = {
@@ -98,20 +102,40 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
     });
   }
 
+  function openEditCategory(cat: Category) {
+    setEditing(cat);
+    setForm({
+      name: cat.name,
+      type: cat.type,
+      icon: cat.icon,
+      color: cat.color,
+      monthlyLimit: cat.monthlyLimit ?? undefined,
+    });
+    setOpen(true);
+  }
+
   function renderList(type: CategoryType) {
     const list = categories.filter((c) => c.type === type);
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((cat) => (
           <Card key={cat.id} className="border-border/60 bg-surface">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-8 w-8 rounded-lg"
-                  style={{ background: `${cat.color}33`, border: `2px solid ${cat.color}` }}
-                />
-                <div>
-                  <p className="font-medium">{cat.name}</p>
+            <CardContent className="flex items-center gap-2 p-4">
+              <div
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
+                role="button"
+                tabIndex={0}
+                onClick={() => openEditCategory(cat)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openEditCategory(cat);
+                  }
+                }}
+              >
+                <EntityIcon icon={cat.icon} color={cat.color} />
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{cat.name}</p>
                   {cat.monthlyLimit && (
                     <p className="text-xs text-muted-foreground">
                       Limit: {cat.monthlyLimit}
@@ -119,37 +143,18 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                   )}
                 </div>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => {
-                    setEditing(cat);
-                    setForm({
-                      name: cat.name,
-                      type: cat.type,
-                      icon: cat.icon,
-                      color: cat.color,
-                      monthlyLimit: cat.monthlyLimit ?? undefined,
-                    });
-                    setOpen(true);
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-red-400"
-                  onClick={() => {
-                    setReassignId(cat.id);
-                    setReassignToId(undefined);
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              <EntityActionsSheet
+                entityName={cat.name}
+                icon={cat.icon}
+                color={cat.color}
+                editLabel="Edit category"
+                deleteLabel="Delete category"
+                onEdit={() => openEditCategory(cat)}
+                onDelete={() => {
+                  setReassignId(cat.id);
+                  setReassignToId(undefined);
+                }}
+              />
             </CardContent>
           </Card>
         ))}
@@ -195,6 +200,15 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                   <Label>Color</Label>
                   <Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <IconPicker
+                  icons={CATEGORY_ICONS}
+                  value={form.icon}
+                  onChange={(icon) => setForm({ ...form, icon })}
+                  color={form.color}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Monthly Limit (optional)</Label>

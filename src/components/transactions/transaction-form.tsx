@@ -13,6 +13,7 @@ import { getCommentSuggestions } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { getCategories } from "@/actions/categories";
 import { AmountCalculator } from "@/components/transactions/amount-calculator";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import { transactionTypeStyles } from "@/lib/transaction-type-styles";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -153,10 +154,7 @@ export function TransactionForm({
     value: c.id,
     label: (
       <span className="flex items-center gap-3">
-        <span
-          className="h-4 w-4 shrink-0 rounded-full"
-          style={{ background: c.color }}
-        />
+        <EntityIcon icon={c.icon} color={c.color} size="sm" />
         {c.name}
       </span>
     ),
@@ -164,7 +162,12 @@ export function TransactionForm({
 
   const accountOptions = accounts.map((a) => ({
     value: a.id,
-    label: `${a.name} (${a.currency})`,
+    label: (
+      <span className="flex items-center gap-3">
+        <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
+        {a.name} ({a.currency})
+      </span>
+    ),
   }));
 
   function handlePhotoChange(file: File | undefined) {

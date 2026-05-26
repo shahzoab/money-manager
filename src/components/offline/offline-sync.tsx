@@ -5,7 +5,14 @@ import { offlineDb } from "@/lib/offline-db";
 
 type OfflineSyncProps = {
   userId: string;
-  accounts: Array<{ id: string; name: string; currency: string; color: string; balance: number }>;
+  accounts: Array<{
+    id: string;
+    name: string;
+    currency: string;
+    color: string;
+    icon: string;
+    balance: number;
+  }>;
   transactions: Array<{
     id: string;
     type: string;
@@ -35,6 +42,7 @@ export function OfflineSync({ userId, accounts, transactions }: OfflineSyncProps
           name: account.name,
           currency: account.currency,
           color: account.color,
+          icon: account.icon,
           balance: account.balance,
           synced: true,
         });

@@ -20,6 +20,7 @@ export type OfflineAccount = {
   name: string;
   currency: string;
   color: string;
+  icon: string;
   balance: number;
   synced: boolean;
 };

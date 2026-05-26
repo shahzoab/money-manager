@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { EntityIcon } from "@/components/ui/entity-icon";
 
 type CategoryBarChartProps = {
   data: { name: string; color: string; amount: number }[];
@@ -58,6 +59,7 @@ type BudgetProgressProps = {
     id: string;
     name: string;
     color: string;
+    icon: string;
     amount: number;
     limit: number | null;
   }[];
@@ -77,10 +79,7 @@ export function BudgetProgress({ categories }: BudgetProgressProps) {
           <div key={cat.id}>
             <div className="mb-1.5 flex items-center justify-between text-sm">
               <span className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: cat.color }}
-                />
+                <EntityIcon icon={cat.icon} color={cat.color} size="sm" />
                 {cat.name}
               </span>
               <span className={over ? "text-red-400" : "text-muted-foreground"}>

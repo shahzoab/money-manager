@@ -28,6 +28,7 @@ export default async function AppLayout({
       name: a.name,
       currency: a.currency,
       color: a.color,
+      icon: a.icon,
       balance: await getAccountBalance(a.id),
     })),
   );

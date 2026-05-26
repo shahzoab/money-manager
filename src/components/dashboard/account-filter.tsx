@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import {
   Select,
   SelectContent,
@@ -13,6 +14,8 @@ type Account = {
   id: string;
   name: string;
   currency: string;
+  color: string;
+  icon: string;
 };
 
 export function AccountFilter({
@@ -44,7 +47,10 @@ export function AccountFilter({
         <SelectItem value="all">All accounts</SelectItem>
         {accounts.map((a) => (
           <SelectItem key={a.id} value={a.id}>
-            {a.name}
+            <span className="flex items-center gap-2">
+              <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
+              {a.name}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

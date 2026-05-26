@@ -11,6 +11,7 @@ type Account = {
   id: string;
   name: string;
   color: string;
+  icon: string;
   isHidden: boolean;
 };
 
@@ -31,6 +32,8 @@ export function AccountsReorderSheet({
     id: account.id,
     label: account.name,
     color: account.color,
+    icon: account.icon,
+    iconFallback: "wallet",
     badge: account.isHidden ? "Hidden" : undefined,
   }));
 

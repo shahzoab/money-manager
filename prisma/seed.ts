@@ -17,7 +17,7 @@ const DEFAULT_CATEGORIES = [
   { name: "Entertainment", type: CategoryType.EXPENSE, icon: "gamepad-2", color: "#A855F7" },
   { name: "Health", type: CategoryType.EXPENSE, icon: "heart-pulse", color: "#EF4444" },
   { name: "Shopping", type: CategoryType.EXPENSE, icon: "shopping-bag", color: "#EC4899" },
-  { name: "Housing", type: CategoryType.EXPENSE, icon: "housing", color: "#6366F1" },
+  { name: "Housing", type: CategoryType.EXPENSE, icon: "home", color: "#6366F1" },
   { name: "Salary", type: CategoryType.INCOME, icon: "briefcase", color: "#10B981" },
   { name: "Freelance", type: CategoryType.INCOME, icon: "laptop", color: "#14B8A6" },
   { name: "Investments", type: CategoryType.INCOME, icon: "trending-up", color: "#8B5CF6" },

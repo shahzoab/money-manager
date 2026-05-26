@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/select";
 import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
 import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
+import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
+import { IconPicker } from "@/components/ui/icon-picker";
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/lib/currency-format";
+import { ACCOUNT_ICONS } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -33,6 +37,7 @@ type Account = {
   name: string;
   currency: string;
   color: string;
+  icon: string;
   balance: number;
   startingBalance: number;
   isHidden: boolean;
@@ -82,7 +87,7 @@ export function AccountsManager({
       currency: account.currency,
       startingBalance: account.startingBalance,
       color: account.color,
-      icon: "wallet",
+      icon: account.icon,
       isHidden: account.isHidden,
       isDefault: account.isDefault,
       notes: account.notes ?? "",
@@ -130,52 +135,55 @@ export function AccountsManager({
           hidden && "border-dashed border-border/80 opacity-80",
         )}
       >
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold text-white"
-                style={{ background: account.color }}
-              >
-                {account.currency.slice(0, 1)}
-              </div>
-              <div>
-                <h3 className="font-semibold">{account.name}</h3>
+        <CardContent className="flex gap-2 p-5">
+          <div
+            className="min-w-0 flex-1 cursor-pointer rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
+            role="button"
+            tabIndex={0}
+            onClick={() => openEdit(account)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openEdit(account);
+              }
+            }}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <EntityIcon icon={account.icon} color={account.color} size="lg" fallback="wallet" />
+              <div className="min-w-0">
+                <h3 className="truncate font-semibold">{account.name}</h3>
                 <p className="text-xs text-muted-foreground">{account.currency}</p>
               </div>
             </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(account)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-red-400"
-                onClick={() => setPendingDelete({ id: account.id, name: account.name })}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+            <p className="mt-4 text-2xl font-semibold tabular-nums">
+              {formatMoney(account.balance, account.currency)}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {account.isDefault && (
+                <span className="inline-block rounded bg-accent/10 px-2 py-0.5 text-xs text-accent">
+                  Default
+                </span>
+              )}
+              {hidden && (
+                <span className="inline-block rounded bg-muted/20 px-2 py-0.5 text-xs text-muted-foreground">
+                  Hidden
+                </span>
+              )}
             </div>
-          </div>
-          <p className="mt-4 text-2xl font-semibold tabular-nums">
-            {formatMoney(account.balance, account.currency)}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {account.isDefault && (
-              <span className="inline-block rounded bg-accent/10 px-2 py-0.5 text-xs text-accent">
-                Default
-              </span>
-            )}
-            {hidden && (
-              <span className="inline-block rounded bg-muted/20 px-2 py-0.5 text-xs text-muted-foreground">
-                Hidden
-              </span>
+            {account.notes && (
+              <p className="mt-2 text-xs text-muted-foreground">{account.notes}</p>
             )}
           </div>
-          {account.notes && (
-            <p className="mt-2 text-xs text-muted-foreground">{account.notes}</p>
-          )}
+          <EntityActionsSheet
+            entityName={account.name}
+            icon={account.icon}
+            color={account.color}
+            iconFallback="wallet"
+            editLabel="Edit account"
+            deleteLabel="Delete account"
+            onEdit={() => openEdit(account)}
+            onDelete={() => setPendingDelete({ id: account.id, name: account.name })}
+          />
         </CardContent>
       </Card>
     );
@@ -233,6 +241,16 @@ export function AccountsManager({
                     onChange={(e) => setForm({ ...form, color: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <IconPicker
+                  icons={ACCOUNT_ICONS}
+                  value={form.icon}
+                  onChange={(icon) => setForm({ ...form, icon })}
+                  color={form.color}
+                  fallback="wallet"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Starting Balance</Label>

@@ -9,6 +9,7 @@ import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatMoney } from "@/lib/currency-format";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
 
@@ -18,7 +19,7 @@ type TransactionRow = {
   amount: unknown;
   date: Date;
   comment: string | null;
-  category: { name: string; color: string } | null;
+  category: { name: string; color: string; icon: string } | null;
   fromAccount: { name: string; currency: string } | null;
   toAccount: { name: string; currency: string } | null;
   tags: { tag: { name: string; color: string } }[];
@@ -90,10 +91,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                 <td className="hidden px-4 py-3 md:table-cell">
                   {tx.category && (
                     <span className="flex items-center gap-1.5">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ background: tx.category.color }}
-                      />
+                      <EntityIcon icon={tx.category.icon} color={tx.category.color} size="sm" />
                       {tx.category.name}
                     </span>
                   )}

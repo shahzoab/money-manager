@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PickerField } from "@/components/ui/picker-field";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCommentSuggestions } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
@@ -137,9 +131,36 @@ export function TransactionForm({
     }
   }, [autoFocusAmount]);
 
-  const filteredCategories = categories.filter((c) =>
-    type === TransactionType.INCOME ? c.type === "INCOME" : c.type === "EXPENSE",
+  const filteredCategories = useMemo(
+    () =>
+      categories.filter((c) =>
+        type === TransactionType.INCOME ? c.type === "INCOME" : c.type === "EXPENSE",
+      ),
+    [categories, type],
   );
+
+  const validCategoryId =
+    categoryId && filteredCategories.some((category) => category.id === categoryId)
+      ? categoryId
+      : "";
+
+  const categoryOptions = filteredCategories.map((c) => ({
+    value: c.id,
+    label: (
+      <span className="flex items-center gap-2">
+        <span
+          className="h-2 w-2 rounded-full"
+          style={{ background: c.color }}
+        />
+        {c.name}
+      </span>
+    ),
+  }));
+
+  const accountOptions = accounts.map((a) => ({
+    value: a.id,
+    label: `${a.name} (${a.currency})`,
+  }));
 
   function handlePhotoChange(file: File | undefined) {
     if (!file) return;
@@ -180,7 +201,7 @@ export function TransactionForm({
       date: new Date(date),
       comment: comment || undefined,
       photoUrl: photoUrl || undefined,
-      categoryId: categoryId || undefined,
+      categoryId: validCategoryId || undefined,
       fromAccountId:
         type === TransactionType.EXPENSE || type === TransactionType.TRANSFER
           ? fromAccountId
@@ -273,24 +294,14 @@ export function TransactionForm({
           {type !== TransactionType.TRANSFER && (
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ background: c.color }}
-                        />
-                        {c.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PickerField
+                value={validCategoryId}
+                onValueChange={setCategoryId}
+                options={categoryOptions}
+                placeholder="Select category"
+                title="Select category"
+                emptyMessage="No categories yet — add one in Settings"
+              />
             </div>
           )}
 
@@ -320,36 +331,28 @@ export function TransactionForm({
           {(type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) && (
             <div className="space-y-2">
               <Label>From Account</Label>
-              <Select value={fromAccountId} onValueChange={setFromAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.currency})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PickerField
+                value={fromAccountId}
+                onValueChange={setFromAccountId}
+                options={accountOptions}
+                placeholder="Select account"
+                title="Select account"
+                emptyMessage="No accounts yet — add one in Settings"
+              />
             </div>
           )}
 
           {(type === TransactionType.INCOME || type === TransactionType.TRANSFER) && (
             <div className="space-y-2">
               <Label>{type === TransactionType.TRANSFER ? "To Account" : "Account"}</Label>
-              <Select value={toAccountId} onValueChange={setToAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.currency})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PickerField
+                value={toAccountId}
+                onValueChange={setToAccountId}
+                options={accountOptions}
+                placeholder="Select account"
+                title={type === TransactionType.TRANSFER ? "Select destination" : "Select account"}
+                emptyMessage="No accounts yet — add one in Settings"
+              />
             </div>
           )}
         </FormSection>

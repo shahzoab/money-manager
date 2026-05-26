@@ -6,6 +6,8 @@ import { Plus, Search } from "lucide-react";
 import { TransactionType, RecurringFrequency } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { getCommentSuggestions } from "@/actions/transactions";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -174,9 +176,10 @@ export function RecurringManager({
                 </div>
                 <div className="space-y-2">
                   <Label>Comment</Label>
-                  <Input
+                  <AutocompleteInput
                     value={form.comment}
-                    onChange={(e) => setForm({ ...form, comment: e.target.value })}
+                    onChange={(comment) => setForm({ ...form, comment })}
+                    onSearch={getCommentSuggestions}
                   />
                 </div>
                 <div className="flex items-center justify-between">

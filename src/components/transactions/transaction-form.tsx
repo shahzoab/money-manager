@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PickerField } from "@/components/ui/picker-field";
@@ -108,7 +109,6 @@ export function TransactionForm({
   );
   const [accounts, setAccounts] = useState<Awaited<ReturnType<typeof getAccounts>>>([]);
   const [categories, setCategories] = useState<Awaited<ReturnType<typeof getCategories>>>([]);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState(initialValues?.photoUrl ?? emptyValues.photoUrl);
 
   const typeStyles = transactionTypeStyles(type);
@@ -310,23 +310,13 @@ export function TransactionForm({
 
           <div className={formFieldGroupClass}>
             <Label htmlFor="comment">Comment</Label>
-            <Input
+            <AutocompleteInput
               id="comment"
               value={comment}
-              onChange={(e) => {
-                setComment(e.target.value);
-                getCommentSuggestions(e.target.value).then(setSuggestions);
-              }}
+              onChange={setComment}
+              onSearch={getCommentSuggestions}
               placeholder="What was this for?"
-              list="comment-suggestions"
             />
-            {suggestions.length > 0 && (
-              <datalist id="comment-suggestions">
-                {suggestions.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
-            )}
           </div>
         </FormSection>
 

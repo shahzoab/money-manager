@@ -355,6 +355,7 @@ export async function getCommentSuggestions(query?: string) {
         : { not: null },
     },
     select: { comment: true },
+    orderBy: { date: "desc" },
     distinct: ["comment"],
     take: 10,
   });

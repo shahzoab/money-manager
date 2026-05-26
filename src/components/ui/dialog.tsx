@@ -36,7 +36,6 @@ const DialogContent = React.forwardRef<
       className={cn(
         "fixed left-1/2 z-[100] grid w-[calc(100%-2rem)] max-w-lg gap-4 overflow-y-auto overscroll-contain border border-border bg-surface p-6 shadow-xl duration-200",
         "top-1/2 max-h-[min(90dvh,calc(100dvh-2rem))] -translate-x-1/2 -translate-y-1/2 sm:rounded-xl",
-        "max-sm:top-4 max-sm:max-h-[calc(100dvh-2rem)] max-sm:translate-y-0",
         className,
       )}
       {...props}

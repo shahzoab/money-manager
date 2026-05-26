@@ -14,6 +14,7 @@ const sizeStyles = {
 type EntityIconProps = {
   icon: string;
   color: string;
+  iconColor?: string;
   size?: keyof typeof sizeStyles;
   fallback?: "tag" | "wallet";
   className?: string;
@@ -22,6 +23,7 @@ type EntityIconProps = {
 export function EntityIcon({
   icon,
   color,
+  iconColor,
   size = "md",
   fallback = "tag",
   className,
@@ -42,7 +44,7 @@ export function EntityIcon({
         border: `${styles.border} ${color}`,
       }}
     >
-      <Icon className={styles.icon} style={{ color }} aria-hidden />
+      <Icon className={styles.icon} style={{ color: iconColor ?? color }} aria-hidden />
     </div>
   );
 }

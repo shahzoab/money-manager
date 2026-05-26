@@ -60,6 +60,11 @@ const emptyValues: TransactionFormValues = {
   photoUrl: "",
 };
 
+const mobileFormFieldClass =
+  "h-14 rounded-xl px-4 text-base lg:h-10 lg:rounded-lg lg:px-3 lg:text-sm";
+const mobileFormLabelClass = "block text-base lg:text-sm";
+const formFieldGroupClass = "space-y-2.5";
+
 function FormSection({
   title,
   children,
@@ -147,9 +152,9 @@ export function TransactionForm({
   const categoryOptions = filteredCategories.map((c) => ({
     value: c.id,
     label: (
-      <span className="flex items-center gap-2">
+      <span className="flex items-center gap-3">
         <span
-          className="h-2 w-2 rounded-full"
+          className="h-4 w-4 shrink-0 rounded-full"
           style={{ background: c.color }}
         />
         {c.name}
@@ -281,19 +286,22 @@ export function TransactionForm({
         </div>
 
         <FormSection title="Details">
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+          <div className={formFieldGroupClass}>
+            <Label htmlFor="date" className={mobileFormLabelClass}>
+              Date
+            </Label>
             <Input
               id="date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              className={mobileFormFieldClass}
             />
           </div>
 
           {type !== TransactionType.TRANSFER && (
-            <div className="space-y-2">
-              <Label>Category</Label>
+            <div className={formFieldGroupClass}>
+              <Label className={mobileFormLabelClass}>Category</Label>
               <PickerField
                 value={validCategoryId}
                 onValueChange={setCategoryId}
@@ -305,8 +313,10 @@ export function TransactionForm({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="comment">Comment</Label>
+          <div className={formFieldGroupClass}>
+            <Label htmlFor="comment" className={mobileFormLabelClass}>
+              Comment
+            </Label>
             <Input
               id="comment"
               value={comment}
@@ -316,6 +326,7 @@ export function TransactionForm({
               }}
               placeholder="What was this for?"
               list="comment-suggestions"
+              className={mobileFormFieldClass}
             />
             {suggestions.length > 0 && (
               <datalist id="comment-suggestions">
@@ -329,8 +340,8 @@ export function TransactionForm({
 
         <FormSection title="Account">
           {(type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) && (
-            <div className="space-y-2">
-              <Label>From Account</Label>
+            <div className={formFieldGroupClass}>
+              <Label className={mobileFormLabelClass}>From Account</Label>
               <PickerField
                 value={fromAccountId}
                 onValueChange={setFromAccountId}
@@ -343,8 +354,10 @@ export function TransactionForm({
           )}
 
           {(type === TransactionType.INCOME || type === TransactionType.TRANSFER) && (
-            <div className="space-y-2">
-              <Label>{type === TransactionType.TRANSFER ? "To Account" : "Account"}</Label>
+            <div className={formFieldGroupClass}>
+              <Label className={mobileFormLabelClass}>
+                {type === TransactionType.TRANSFER ? "To Account" : "Account"}
+              </Label>
               <PickerField
                 value={toAccountId}
                 onValueChange={setToAccountId}

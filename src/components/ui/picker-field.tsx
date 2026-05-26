@@ -50,13 +50,13 @@ function PickerTrigger({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-10 w-full items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-14 w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
       )}
     >
-      <span className={cn(!selectedLabel && "text-muted-foreground")}>
+      <span className={cn("truncate pr-2", !selectedLabel && "text-muted-foreground")}>
         {selectedLabel ?? placeholder}
       </span>
-      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+      <ChevronDown className="h-5 w-5 shrink-0 opacity-50" />
     </button>
   );
 }
@@ -90,16 +90,16 @@ function MobilePickerSheet({
         className="flex max-h-[75vh] flex-col gap-0 rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border" />
-        <SheetHeader className="shrink-0 px-4 pb-2 pt-3 text-left">
-          <SheetTitle>{title}</SheetTitle>
+        <SheetHeader className="shrink-0 px-5 pb-3 pt-4 text-left">
+          <SheetTitle className="text-xl">{title}</SheetTitle>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
           {options.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-center text-base text-muted-foreground">
               {emptyMessage ?? "No options available"}
             </p>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {options.map((option) => {
                 const isSelected = option.value === value;
                 return (
@@ -108,19 +108,19 @@ function MobilePickerSheet({
                       type="button"
                       onClick={() => handleSelect(option.value)}
                       className={cn(
-                        "flex min-h-12 w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm transition-colors",
+                        "flex min-h-16 w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-lg transition-colors",
                         isSelected
-                          ? "bg-surface-elevated font-medium"
+                          ? "bg-surface-elevated font-semibold ring-1 ring-accent/40"
                           : "hover:bg-surface-elevated/60 active:bg-surface-elevated",
                       )}
                     >
-                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="flex min-w-0 flex-1 items-center gap-3 text-lg [&_*]:text-lg">
                         {option.label}
                       </span>
                       {isSelected ? (
-                        <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                        <Check className="h-5 w-5 shrink-0 text-accent" aria-hidden />
                       ) : (
-                        <span className="h-4 w-4 shrink-0" aria-hidden />
+                        <span className="h-5 w-5 shrink-0" aria-hidden />
                       )}
                     </button>
                   </li>

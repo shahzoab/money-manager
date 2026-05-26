@@ -18,8 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
-import { RoundingMode } from "@/generated/prisma/enums";
-import { formatAmount } from "@/lib/currency-format";
+import { formatAmount, wholeNumberFormat } from "@/lib/currency-format";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -156,10 +155,7 @@ export function AppShell({
                   Total
                 </p>
                 <p className="text-xl font-semibold tabular-nums text-accent">
-                  {formatAmount(totalBalance, {
-                    fractionDigits: 0,
-                    roundingMode: RoundingMode.NEAREST,
-                  })}
+                  {formatAmount(totalBalance, wholeNumberFormat)}
                 </p>
               </div>
             )}

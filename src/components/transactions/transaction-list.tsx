@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatMoney } from "@/lib/currency-format";
+import { formatMoney, wholeNumberFormat } from "@/lib/currency-format";
 import { EntityIcon } from "@/components/ui/entity-icon";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
@@ -111,7 +111,11 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   }`}
                 >
                   {tx.type === TransactionType.INCOME ? "+" : tx.type === TransactionType.EXPENSE ? "-" : ""}
-                  {formatMoney(Number(tx.amount), tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency)}
+                  {formatMoney(
+                    Number(tx.amount),
+                    tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency,
+                    wholeNumberFormat,
+                  )}
                 </td>
                 <td className="hidden px-4 py-4 sm:table-cell lg:py-3">
                   <div className="flex gap-1">

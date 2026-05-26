@@ -1,5 +1,10 @@
 import { DecimalSeparator, RoundingMode } from "@/generated/prisma/enums";
 
+export const wholeNumberFormat = {
+  fractionDigits: 0,
+  roundingMode: RoundingMode.NEAREST,
+} as const;
+
 export const SUPPORTED_CURRENCIES = [
   "USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "INR", "PKR",
   "AED", "SAR", "TRY", "RUB", "BRL", "MXN", "KRW", "SGD", "HKD", "NZD",
@@ -40,10 +45,12 @@ export function formatMoney(
   options?: {
     decimalSeparator?: DecimalSeparator;
     roundingMode?: RoundingMode;
+    fractionDigits?: number;
   },
 ): string {
   let value = amount;
   const mode = options?.roundingMode ?? RoundingMode.NONE;
+  const fractionDigits = options?.fractionDigits ?? 2;
 
   if (mode === RoundingMode.NEAREST) value = Math.round(value);
   else if (mode === RoundingMode.UP) value = Math.ceil(value);
@@ -52,8 +59,8 @@ export function formatMoney(
   const formatted = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency.length === 3 ? currency : "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(value);
 
   if (options?.decimalSeparator === DecimalSeparator.COMMA) {

@@ -1,11 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { RoundingMode } from "@/generated/prisma/enums";
-import { formatAmount } from "@/lib/currency-format";
-
-const summaryFormat = {
-  fractionDigits: 0,
-  roundingMode: RoundingMode.NEAREST,
-} as const;
+import { formatAmount, wholeNumberFormat } from "@/lib/currency-format";
 
 type TransactionSummaryCardsProps = {
   income: number;
@@ -26,7 +20,7 @@ export function TransactionSummaryCards({
         <CardContent className="p-5">
           <p className="text-xs uppercase text-muted-foreground">Income</p>
           <p className="truncate text-xl font-semibold tabular-nums text-accent-secondary">
-            {formatAmount(income, summaryFormat)}
+            {formatAmount(income, wholeNumberFormat)}
           </p>
         </CardContent>
       </Card>
@@ -34,7 +28,7 @@ export function TransactionSummaryCards({
         <CardContent className="p-5">
           <p className="text-xs uppercase text-muted-foreground">Expenses</p>
           <p className="truncate text-xl font-semibold tabular-nums">
-            {formatAmount(expenses, summaryFormat)}
+            {formatAmount(expenses, wholeNumberFormat)}
           </p>
         </CardContent>
       </Card>
@@ -42,7 +36,7 @@ export function TransactionSummaryCards({
         <CardContent className="p-5">
           <p className="text-xs uppercase text-muted-foreground">Transfers</p>
           <p className="truncate text-xl font-semibold tabular-nums">
-            {formatAmount(transfers, summaryFormat)}
+            {formatAmount(transfers, wholeNumberFormat)}
           </p>
         </CardContent>
       </Card>
@@ -54,7 +48,7 @@ export function TransactionSummaryCards({
               net >= 0 ? "text-accent-secondary" : "text-red-400"
             }`}
           >
-            {formatAmount(net, summaryFormat)}
+            {formatAmount(net, wholeNumberFormat)}
           </p>
         </CardContent>
       </Card>

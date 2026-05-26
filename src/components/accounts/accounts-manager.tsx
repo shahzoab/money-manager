@@ -23,7 +23,7 @@ import { EntityBadge } from "@/components/ui/entity-badge";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/lib/currency-format";
-import { ACCOUNT_ICONS } from "@/lib/icon-map";
+import { ACCOUNT_ICON_GROUPS } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -235,7 +235,7 @@ export function AccountsManager({
               <div className="space-y-2">
                 <Label>Icon</Label>
                 <IconPicker
-                  icons={ACCOUNT_ICONS}
+                  groups={ACCOUNT_ICON_GROUPS}
                   value={form.icon}
                   onChange={(icon) => setForm({ ...form, icon })}
                   color={form.color}

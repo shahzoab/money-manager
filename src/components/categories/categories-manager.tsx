@@ -23,7 +23,7 @@ import { CategoriesReorderSheet } from "@/components/categories/categories-reord
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
-import { CATEGORY_ICONS } from "@/lib/icon-map";
+import { CATEGORY_ICON_GROUPS } from "@/lib/icon-map";
 import { transactionTypeStyles } from "@/lib/transaction-type-styles";
 import { toast } from "sonner";
 
@@ -205,7 +205,7 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
               <div className="space-y-2">
                 <Label>Icon</Label>
                 <IconPicker
-                  icons={CATEGORY_ICONS}
+                  groups={CATEGORY_ICON_GROUPS}
                   value={form.icon}
                   onChange={(icon) => setForm({ ...form, icon })}
                   color={form.color}

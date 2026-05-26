@@ -330,6 +330,7 @@ export async function updateTransaction(
   });
 
   revalidatePath("/transactions");
+  revalidatePath(`/transactions/${id}`);
   revalidatePath("/dashboard");
   revalidatePath("/charts");
   return serializeTransaction(transaction);
@@ -339,6 +340,7 @@ export async function deleteTransaction(id: string) {
   const session = await requireSession();
   await db.transaction.delete({ where: { id, userId: session.user.id } });
   revalidatePath("/transactions");
+  revalidatePath(`/transactions/${id}`);
   revalidatePath("/dashboard");
   revalidatePath("/charts");
 }

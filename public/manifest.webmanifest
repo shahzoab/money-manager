@@ -18,13 +18,18 @@
   "shortcuts": [
     {
       "name": "Add Expense",
-      "url": "/transactions?action=expense",
+      "url": "/transactions/new?type=expense",
       "description": "Quickly add an expense"
     },
     {
       "name": "Add Income",
-      "url": "/transactions?action=income",
+      "url": "/transactions/new?type=income",
       "description": "Quickly add income"
+    },
+    {
+      "name": "Add Transfer",
+      "url": "/transactions/new?type=transfer",
+      "description": "Quickly add a transfer"
     }
   ]
 }

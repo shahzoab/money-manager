@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Camera, X } from "lucide-react";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,8 @@ import { getCommentSuggestions } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { getCategories } from "@/actions/categories";
 import { AmountCalculator } from "@/components/transactions/amount-calculator";
+import { transactionTypeStyles } from "@/lib/transaction-type-styles";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export type TransactionFormValues = {
@@ -47,6 +51,7 @@ type TransactionFormProps = {
   submitLabel: string;
   pending: boolean;
   autoFocusAmount?: boolean;
+  cancelHref?: string;
   onSubmit: (data: TransactionFormSubmitData) => void;
 };
 
@@ -61,15 +66,34 @@ const emptyValues: TransactionFormValues = {
   photoUrl: "",
 };
 
+function FormSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </h3>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
 export function TransactionForm({
   mode,
   initialValues,
   submitLabel,
   pending,
   autoFocusAmount,
+  cancelHref,
   onSubmit,
 }: TransactionFormProps) {
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [type, setType] = useState<TransactionType>(
     initialValues?.type ?? emptyValues.type,
   );
@@ -89,6 +113,8 @@ export function TransactionForm({
   const [categories, setCategories] = useState<Awaited<ReturnType<typeof getCategories>>>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState(initialValues?.photoUrl ?? emptyValues.photoUrl);
+
+  const typeStyles = transactionTypeStyles(type);
 
   useEffect(() => {
     Promise.all([getAccounts(), getCategories()]).then(([accs, cats]) => {
@@ -114,6 +140,15 @@ export function TransactionForm({
   const filteredCategories = categories.filter((c) =>
     type === TransactionType.INCOME ? c.type === "INCOME" : c.type === "EXPENSE",
   );
+
+  function handlePhotoChange(file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setPhotoUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,19 +199,47 @@ export function TransactionForm({
         onValueChange={(v) => setType(v as TransactionType)}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value={TransactionType.EXPENSE}>Expense</TabsTrigger>
-          <TabsTrigger value={TransactionType.INCOME}>Income</TabsTrigger>
-          <TabsTrigger value={TransactionType.TRANSFER}>Transfer</TabsTrigger>
+        <TabsList className="grid h-11 w-full grid-cols-3 bg-surface-elevated p-1">
+          <TabsTrigger
+            value={TransactionType.EXPENSE}
+            className={transactionTypeStyles(TransactionType.EXPENSE).tab}
+          >
+            Expense
+          </TabsTrigger>
+          <TabsTrigger
+            value={TransactionType.INCOME}
+            className={transactionTypeStyles(TransactionType.INCOME).tab}
+          >
+            Income
+          </TabsTrigger>
+          <TabsTrigger
+            value={TransactionType.TRANSFER}
+            className={transactionTypeStyles(TransactionType.TRANSFER).tab}
+          >
+            Transfer
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-        <div className="space-y-2">
-          <Label>Amount</Label>
-          <div className="flex gap-2">
+      <form id="transaction-form" onSubmit={handleSubmit} className="mt-6 space-y-6 pb-28 lg:pb-0">
+        <div
+          className={cn(
+            "rounded-2xl border border-border/60 bg-surface-elevated/50 px-4 py-6 text-center ring-1 ring-inset",
+            typeStyles.ring,
+          )}
+        >
+          <Label htmlFor="amount" className="sr-only">
+            Amount
+          </Label>
+          <div className="flex w-full items-center justify-center gap-1">
+            {typeStyles.prefix ? (
+              <span className={cn("shrink-0 text-3xl font-semibold tabular-nums", typeStyles.amount)}>
+                {typeStyles.prefix}
+              </span>
+            ) : null}
             <Input
               ref={amountInputRef}
+              id="amount"
               type="number"
               step="0.01"
               min="0"
@@ -184,117 +247,182 @@ export function TransactionForm({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="text-lg tabular-nums"
+              className={cn(
+                "h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-center text-4xl font-bold tabular-nums shadow-none focus-visible:ring-0 sm:text-5xl",
+                typeStyles.amount,
+              )}
               required
             />
+          </div>
+          <div className="mt-3 flex justify-center">
             <AmountCalculator onResult={(v) => setAmount(String(v))} />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Date</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </div>
-
-        {type !== TransactionType.TRANSFER && (
+        <FormSection title="Details">
           <div className="space-y-2">
-            <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
-        )}
 
-        {(type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) && (
-          <div className="space-y-2">
-            <Label>From Account</Label>
-            <Select value={fromAccountId} onValueChange={setFromAccountId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({a.currency})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {(type === TransactionType.INCOME || type === TransactionType.TRANSFER) && (
-          <div className="space-y-2">
-            <Label>{type === TransactionType.TRANSFER ? "To Account" : "Account"}</Label>
-            <Select value={toAccountId} onValueChange={setToAccountId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({a.currency})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label>Comment</Label>
-          <Input
-            value={comment}
-            onChange={(e) => {
-              setComment(e.target.value);
-              getCommentSuggestions(e.target.value).then(setSuggestions);
-            }}
-            placeholder="Optional note"
-            list="comment-suggestions"
-          />
-          {suggestions.length > 0 && (
-            <datalist id="comment-suggestions">
-              {suggestions.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+          {type !== TransactionType.TRANSFER && (
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: c.color }}
+                        />
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
-        </div>
 
-        <div className="space-y-2">
-          <Label>Receipt photo (optional)</Label>
-          <Input
+          <div className="space-y-2">
+            <Label htmlFor="comment">Comment</Label>
+            <Input
+              id="comment"
+              value={comment}
+              onChange={(e) => {
+                setComment(e.target.value);
+                getCommentSuggestions(e.target.value).then(setSuggestions);
+              }}
+              placeholder="What was this for?"
+              list="comment-suggestions"
+            />
+            {suggestions.length > 0 && (
+              <datalist id="comment-suggestions">
+                {suggestions.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            )}
+          </div>
+        </FormSection>
+
+        <FormSection title="Account">
+          {(type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) && (
+            <div className="space-y-2">
+              <Label>From Account</Label>
+              <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {(type === TransactionType.INCOME || type === TransactionType.TRANSFER) && (
+            <div className="space-y-2">
+              <Label>{type === TransactionType.TRANSFER ? "To Account" : "Account"}</Label>
+              <Select value={toAccountId} onValueChange={setToAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </FormSection>
+
+        <FormSection title="Receipt">
+          <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             capture="environment"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                if (typeof reader.result === "string") setPhotoUrl(reader.result);
-              };
-              reader.readAsDataURL(file);
-            }}
+            className="hidden"
+            onChange={(e) => handlePhotoChange(e.target.files?.[0])}
           />
-          {photoUrl && (
-            <p className="text-xs text-accent-secondary">Photo attached</p>
+          {photoUrl ? (
+            <div className="relative overflow-hidden rounded-xl border border-border bg-surface">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoUrl} alt="Receipt preview" className="max-h-48 w-full object-contain" />
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="absolute right-2 top-2 h-8 w-8 rounded-full"
+                onClick={() => {
+                  setPhotoUrl("");
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                aria-label="Remove receipt"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-border/80 bg-surface/50 px-4 py-8 text-muted-foreground transition-colors hover:border-accent/50 hover:bg-surface-elevated/50 hover:text-foreground"
+            >
+              <Camera className="h-8 w-8 opacity-60" />
+              <span className="text-sm font-medium">Add receipt photo</span>
+              <span className="text-xs">Tap to take or upload</span>
+            </button>
           )}
-        </div>
+        </FormSection>
 
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Saving..." : submitLabel}
-        </Button>
+        <div className="hidden gap-2 lg:flex">
+          {cancelHref ? (
+            <Button type="button" variant="outline" className="flex-1" asChild>
+              <Link href={cancelHref}>Cancel</Link>
+            </Button>
+          ) : null}
+          <Button type="submit" className="flex-1" disabled={pending}>
+            {pending ? "Saving..." : submitLabel}
+          </Button>
+        </div>
       </form>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-lg gap-2">
+          {cancelHref ? (
+            <Button type="button" variant="outline" className="flex-1" asChild>
+              <Link href={cancelHref}>Cancel</Link>
+            </Button>
+          ) : null}
+          <Button
+            type="submit"
+            form="transaction-form"
+            className="flex-1"
+            disabled={pending}
+          >
+            {pending ? "Saving..." : submitLabel}
+          </Button>
+        </div>
+      </div>
     </>
   );
 }

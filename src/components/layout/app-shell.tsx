@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { SyncStatusIndicator } from "@/components/layout/sync-status";
-import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -63,9 +63,38 @@ function NavLinks({
   );
 }
 
+function isTransactionFormPage(pathname: string) {
+  if (pathname === "/transactions/new") return true;
+  return /^\/transactions\/[^/]+\/edit$/.test(pathname);
+}
+
+function shouldHideFab(pathname: string) {
+  if (isTransactionFormPage(pathname)) return true;
+  if (/^\/transactions\/[^/]+$/.test(pathname)) return true;
+  return false;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
+
+  const hideFab = shouldHideFab(pathname);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey) {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA") {
+          if (!isTransactionFormPage(pathname)) {
+            router.push("/transactions/new");
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [pathname, router]);
 
   return (
     <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background">
@@ -115,31 +144,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
             <SyncStatusIndicator />
-            <AddTransactionDialog
-              trigger={
-                <Button size="sm" className="max-lg:hidden gap-1.5">
-                  <Plus className="h-4 w-4" />
-                  Add
-                </Button>
-              }
-              mobileTrigger={
-                <Button
-                  size="lg"
-                  className="h-14 gap-2 rounded-full px-8 shadow-lg"
-                  aria-label="Add transaction"
-                >
-                  <Plus className="h-6 w-6" />
-                  Add
-                </Button>
-              }
-            />
+            <Button size="sm" className="max-lg:hidden gap-1.5" asChild>
+              <Link href="/transactions/new">
+                <Plus className="h-4 w-4" />
+                Add
+              </Link>
+            </Button>
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 pb-44 lg:p-6 lg:pb-6">
+        <main
+          className={`min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-6 lg:pb-6 ${hideFab ? "pb-6" : "pb-44"}`}
+        >
           {children}
         </main>
       </div>
+
+      {!hideFab && (
+        <MobileBottomBar
+          addButton={
+            <Button
+              size="lg"
+              className="h-14 gap-2 rounded-full px-8 shadow-lg"
+              aria-label="Add transaction"
+              asChild
+            >
+              <Link href="/transactions/new">
+                <Plus className="h-6 w-6" />
+                Add
+              </Link>
+            </Button>
+          }
+        />
+      )}
     </div>
   );
 }

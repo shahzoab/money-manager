@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -9,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatMoney } from "@/lib/currency-format";
 import { deleteTransaction } from "@/actions/transactions";
-import { TransactionDetailDialog } from "@/components/transactions/transaction-detail-dialog";
-import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { toast } from "sonner";
 
 type TransactionRow = {
@@ -33,26 +32,17 @@ type TransactionListProps = {
 
 export function TransactionList({ transactions, currency, showYear = false }: TransactionListProps) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [deleting, startDeleteTransition] = useTransition();
-
-  function openDetail(id: string) {
-    setSelectedId(id);
-    setDetailOpen(true);
-  }
-
-  function openEdit(id: string) {
-    setSelectedId(id);
-    setEditOpen(true);
-  }
 
   if (transactions.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
-        No transactions yet. Press <kbd className="rounded bg-surface-elevated px-1.5 py-0.5">N</kbd> to add one.
+        No transactions yet.{" "}
+        <Link href="/transactions/new" className="text-accent hover:underline">
+          Add one
+        </Link>{" "}
+        or press <kbd className="rounded bg-surface-elevated px-1.5 py-0.5">N</kbd>
       </div>
     );
   }
@@ -75,8 +65,8 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
             {transactions.map((tx, i) => (
               <tr
                 key={tx.id}
-                className={`cursor-pointer border-b border-border/50 hover:bg-surface-elevated/50 ${i % 2 === 0 ? "bg-surface" : "bg-surface/50"}`}
-                onClick={() => openDetail(tx.id)}
+                className={`cursor-pointer border-b border-border/50 transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated ${i % 2 === 0 ? "bg-surface" : "bg-surface/50"}`}
+                onClick={() => router.push(`/transactions/${tx.id}`)}
               >
                 <td className="whitespace-nowrap px-2 py-3 tabular-nums text-muted-foreground sm:px-4">
                   {format(new Date(tx.date), showYear ? "MMM d, yyyy" : "MMM d")}
@@ -133,7 +123,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openEdit(tx.id);
+                        router.push(`/transactions/${tx.id}/edit`);
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -158,20 +148,6 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
           </tbody>
         </table>
       </div>
-
-      <TransactionDetailDialog
-        transactionId={selectedId}
-        currency={currency}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onEdit={(id) => openEdit(id)}
-      />
-
-      <EditTransactionDialog
-        transactionId={selectedId}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

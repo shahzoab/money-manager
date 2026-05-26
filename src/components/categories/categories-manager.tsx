@@ -123,7 +123,7 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
           <Card key={cat.id} className="border-border/60 bg-surface">
             <CardContent className="flex items-center gap-2 p-4">
               <div
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
+                className="min-w-0 flex-1 cursor-pointer space-y-2 rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
                 role="button"
                 tabIndex={0}
                 onClick={() => openEditCategory(cat)}
@@ -134,16 +134,14 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                   }
                 }}
               >
-                <div className="min-w-0">
-                  <EntityBadge icon={cat.icon} color={cat.color} size="md" className="max-w-full">
-                    {cat.name}
-                  </EntityBadge>
-                  {cat.monthlyLimit && (
-                    <p className="text-xs text-muted-foreground">
-                      Limit: {cat.monthlyLimit}
-                    </p>
-                  )}
-                </div>
+                <EntityBadge icon={cat.icon} color={cat.color} size="field">
+                  {cat.name}
+                </EntityBadge>
+                {cat.monthlyLimit && (
+                  <p className="text-xs text-muted-foreground">
+                    Limit: {cat.monthlyLimit}
+                  </p>
+                )}
               </div>
               <EntityActionsSheet
                 entityName={cat.name}

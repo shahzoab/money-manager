@@ -93,7 +93,7 @@ function SortableRow({
         <EntityBadge
           icon={item.icon}
           color={item.color}
-          size="sm"
+          size="field"
           fallback={item.iconFallback}
           className="min-w-0 flex-1"
         >

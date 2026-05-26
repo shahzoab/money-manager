@@ -134,7 +134,7 @@ export function AccountsManager({
       >
         <CardContent className="flex gap-2 p-5">
           <div
-            className="min-w-0 flex-1 cursor-pointer rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
+            className="min-w-0 flex-1 cursor-pointer space-y-2 rounded-lg transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated"
             role="button"
             tabIndex={0}
             onClick={() => openEdit(account)}
@@ -145,18 +145,15 @@ export function AccountsManager({
               }
             }}
           >
-            <div className="min-w-0">
-              <EntityBadge
-                icon={account.icon}
-                color={account.color}
-                size="lg"
-                fallback="wallet"
-                className="max-w-full"
-              >
-                {account.name}
-              </EntityBadge>
-              <p className="mt-1 text-xs text-muted-foreground">{account.currency}</p>
-            </div>
+            <EntityBadge
+              icon={account.icon}
+              color={account.color}
+              size="field"
+              fallback="wallet"
+            >
+              {account.name}
+            </EntityBadge>
+            <p className="text-xs text-muted-foreground">{account.currency}</p>
             <p className="mt-4 text-2xl font-semibold tabular-nums">
               {formatMoney(account.balance, account.currency)}
             </p>

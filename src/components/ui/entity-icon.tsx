@@ -2,6 +2,7 @@
 
 import { Tag, Wallet, type LucideIcon } from "lucide-react";
 import { getLucideIcon } from "@/lib/icon-map";
+import { getEntityColorStyle } from "@/lib/entity-color-styles";
 import { cn } from "@/lib/utils";
 
 const sizeStyles = {
@@ -14,7 +15,6 @@ const sizeStyles = {
 type EntityIconProps = {
   icon: string;
   color: string;
-  iconColor?: string;
   size?: keyof typeof sizeStyles;
   fallback?: "tag" | "wallet";
   className?: string;
@@ -23,7 +23,6 @@ type EntityIconProps = {
 export function EntityIcon({
   icon,
   color,
-  iconColor,
   size = "md",
   fallback = "tag",
   className,
@@ -39,12 +38,9 @@ export function EntityIcon({
         styles.container,
         className,
       )}
-      style={{
-        background: `${color}33`,
-        border: `${styles.border} ${color}`,
-      }}
+      style={getEntityColorStyle(color, styles.border)}
     >
-      <Icon className={styles.icon} style={{ color: iconColor ?? color }} aria-hidden />
+      <Icon className={cn(styles.icon, "text-white")} aria-hidden />
     </div>
   );
 }

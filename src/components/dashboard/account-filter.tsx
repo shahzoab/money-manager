@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { PickerField } from "@/components/ui/picker-field";
 
 type Account = {
@@ -29,10 +29,9 @@ export function AccountFilter({
       ...accounts.map((a) => ({
         value: a.id,
         label: (
-          <span className="flex items-center gap-2">
-            <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
+          <EntityBadge icon={a.icon} color={a.color} size="field" fallback="wallet">
             {a.name}
-          </span>
+          </EntityBadge>
         ),
       })),
     ],

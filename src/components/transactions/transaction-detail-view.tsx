@@ -15,7 +15,7 @@ import {
   transactionTypeStyles,
 } from "@/lib/transaction-type-styles";
 import { cn } from "@/lib/utils";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { toast } from "sonner";
 
 type TransactionDetail = Awaited<ReturnType<typeof getTransaction>>;
@@ -102,14 +102,13 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
           {transaction.type !== TransactionType.TRANSFER && (
             <DetailRow label="Category">
               {transaction.category ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <EntityIcon
-                    icon={transaction.category.icon}
-                    color={transaction.category.color}
-                    size="sm"
-                  />
+                <EntityBadge
+                  icon={transaction.category.icon}
+                  color={transaction.category.color}
+                  size="sm"
+                >
                   {transaction.category.name}
-                </span>
+                </EntityBadge>
               ) : (
                 "—"
               )}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import {
   Sheet,
   SheetContent,
@@ -68,12 +68,16 @@ export function EntityActionsSheet({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-8 pt-6">
           <SheetHeader className="items-center pb-4 text-center">
-            <div className="flex items-center justify-center gap-3">
-              {icon && color ? (
-                <EntityIcon icon={icon} color={color} fallback={iconFallback} />
-              ) : null}
+            {icon && color ? (
+              <>
+                <SheetTitle className="sr-only">{entityName}</SheetTitle>
+                <EntityBadge icon={icon} color={color} size="lg" fallback={iconFallback}>
+                  {entityName}
+                </EntityBadge>
+              </>
+            ) : (
               <SheetTitle className={sheetTitleClass}>{entityName}</SheetTitle>
-            </div>
+            )}
           </SheetHeader>
           <div className="space-y-2">
             <button

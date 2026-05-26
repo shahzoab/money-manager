@@ -20,7 +20,7 @@ import { ColorPickerField } from "@/components/ui/color-picker-field";
 import { PickerField } from "@/components/ui/picker-field";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { CategoriesReorderSheet } from "@/components/categories/categories-reorder-sheet";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { CATEGORY_ICONS } from "@/lib/icon-map";
@@ -134,9 +134,10 @@ export function CategoriesManager({ categories: initial }: { categories: Categor
                   }
                 }}
               >
-                <EntityIcon icon={cat.icon} color={cat.color} />
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{cat.name}</p>
+                  <EntityBadge icon={cat.icon} color={cat.color} size="md" className="max-w-full">
+                    {cat.name}
+                  </EntityBadge>
                   {cat.monthlyLimit && (
                     <p className="text-xs text-muted-foreground">
                       Limit: {cat.monthlyLimit}

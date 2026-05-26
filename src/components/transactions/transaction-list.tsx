@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { listTextClass } from "@/lib/form-field-styles";
 import { formatMoney, wholeNumberFormat } from "@/lib/currency-format";
 import { cn } from "@/lib/utils";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
 
@@ -92,10 +92,9 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                 </td>
                 <td className="hidden px-4 py-4 md:table-cell lg:py-3">
                   {tx.category && (
-                    <span className="flex items-center gap-1.5">
-                      <EntityIcon icon={tx.category.icon} color={tx.category.color} size="sm" />
+                    <EntityBadge icon={tx.category.icon} color={tx.category.color} size="sm">
                       {tx.category.name}
-                    </span>
+                    </EntityBadge>
                   )}
                 </td>
                 <td className="hidden px-4 py-4 text-muted-foreground sm:table-cell lg:py-3">

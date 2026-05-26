@@ -38,7 +38,6 @@ export function IconPicker({
           <EntityIcon
             icon={icon}
             color={color}
-            iconColor="#ffffff"
             size={isMobile ? "xl" : "md"}
             fallback={fallback}
           />

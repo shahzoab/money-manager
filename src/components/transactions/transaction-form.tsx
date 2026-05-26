@@ -13,7 +13,7 @@ import { getCommentSuggestions } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { getCategories } from "@/actions/categories";
 import { AmountCalculator } from "@/components/transactions/amount-calculator";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { transactionTypeStyles } from "@/lib/transaction-type-styles";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -150,20 +150,18 @@ export function TransactionForm({
   const categoryOptions = filteredCategories.map((c) => ({
     value: c.id,
     label: (
-      <span className="flex items-center gap-3">
-        <EntityIcon icon={c.icon} color={c.color} size="sm" />
+      <EntityBadge icon={c.icon} color={c.color} size="field">
         {c.name}
-      </span>
+      </EntityBadge>
     ),
   }));
 
   const accountOptions = accounts.map((a) => ({
     value: a.id,
     label: (
-      <span className="flex items-center gap-3">
-        <EntityIcon icon={a.icon} color={a.color} size="sm" fallback="wallet" />
+      <EntityBadge icon={a.icon} color={a.color} size="field" fallback="wallet">
         {a.name} ({a.currency})
-      </span>
+      </EntityBadge>
     ),
   }));
 

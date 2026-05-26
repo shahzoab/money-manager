@@ -26,7 +26,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
+import { EntityLabel } from "@/components/ui/entity-label";
 import { listTextClass } from "@/lib/form-field-styles";
 import { cn } from "@/lib/utils";
 
@@ -89,20 +90,22 @@ function SortableRow({
       </button>
 
       {item.icon && item.color ? (
-        <EntityIcon
+        <EntityBadge
           icon={item.icon}
           color={item.color}
           size="sm"
           fallback={item.iconFallback}
-        />
+          className="min-w-0 flex-1"
+        >
+          {item.label}
+        </EntityBadge>
       ) : item.color ? (
-        <div
-          className="h-6 w-6 shrink-0 rounded-md"
-          style={{ background: item.color }}
-        />
-      ) : null}
-
-      <span className={cn("min-w-0 flex-1 truncate font-medium", listTextClass)}>{item.label}</span>
+        <EntityLabel color={item.color} size="sm" className="min-w-0 flex-1">
+          {item.label}
+        </EntityLabel>
+      ) : (
+        <span className={cn("min-w-0 flex-1 truncate font-medium", listTextClass)}>{item.label}</span>
+      )}
 
       {item.badge && (
         <span className="shrink-0 rounded bg-muted/20 px-2 py-0.5 text-xs text-muted-foreground">

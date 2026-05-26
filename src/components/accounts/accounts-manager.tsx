@@ -19,7 +19,7 @@ import { ColorPickerField } from "@/components/ui/color-picker-field";
 import { PickerField } from "@/components/ui/picker-field";
 import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
 import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
-import { EntityIcon } from "@/components/ui/entity-icon";
+import { EntityBadge } from "@/components/ui/entity-badge";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/lib/currency-format";
@@ -145,12 +145,17 @@ export function AccountsManager({
               }
             }}
           >
-            <div className="flex min-w-0 items-center gap-3">
-              <EntityIcon icon={account.icon} color={account.color} size="lg" fallback="wallet" />
-              <div className="min-w-0">
-                <h3 className="truncate font-semibold">{account.name}</h3>
-                <p className="text-xs text-muted-foreground">{account.currency}</p>
-              </div>
+            <div className="min-w-0">
+              <EntityBadge
+                icon={account.icon}
+                color={account.color}
+                size="lg"
+                fallback="wallet"
+                className="max-w-full"
+              >
+                {account.name}
+              </EntityBadge>
+              <p className="mt-1 text-xs text-muted-foreground">{account.currency}</p>
             </div>
             <p className="mt-4 text-2xl font-semibold tabular-nums">
               {formatMoney(account.balance, account.currency)}

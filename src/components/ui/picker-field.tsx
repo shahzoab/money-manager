@@ -16,7 +16,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-media-query";
-import { formFieldClass, sheetItemClass, sheetTitleClass } from "@/lib/form-field-styles";
+import { formFieldClass, sheetTitleClass } from "@/lib/form-field-styles";
 import { cn } from "@/lib/utils";
 
 export type PickerOption = {
@@ -114,8 +114,8 @@ function MobilePickerSheet({
                       type="button"
                       onClick={() => handleSelect(option.value)}
                       className={cn(
-                        "flex w-full items-center gap-4 text-left transition-colors",
-                        sheetItemClass,
+                        "flex w-full items-center gap-2 text-left transition-colors",
+                        "min-h-14 rounded-xl px-2 py-1.5 text-base font-medium lg:px-3 lg:py-2",
                         isSelected
                           ? "bg-surface-elevated font-semibold ring-1 ring-accent/40"
                           : "hover:bg-surface-elevated/60 active:bg-surface-elevated",

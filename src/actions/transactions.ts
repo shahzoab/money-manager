@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { convertAmount } from "@/lib/currency";
 import { serializeTransaction } from "@/lib/serialize";
 import { buildTransactionSummary } from "@/lib/transaction-summary";
+import { reportableTransactionWhere } from "@/lib/transaction-reports";
 
 const transactionSchema = z.object({
   type: z.nativeEnum(TransactionType),
@@ -21,6 +22,7 @@ const transactionSchema = z.object({
   fromAccountId: z.string().optional(),
   toAccountId: z.string().optional(),
   tagIds: z.array(z.string()).optional(),
+  isReconciliation: z.boolean().optional(),
 });
 
 const transactionInclude = {
@@ -191,7 +193,7 @@ export async function getTransactions(filters?: {
     db.transaction.count({ where }),
     db.transaction.groupBy({
       by: ["type"],
-      where,
+      where: { ...where, ...reportableTransactionWhere },
       _sum: { amountInBaseCurrency: true },
     }),
   ]);
@@ -244,6 +246,7 @@ export async function createTransaction(input: z.infer<typeof transactionSchema>
       categoryId: data.categoryId,
       fromAccountId: data.fromAccountId,
       toAccountId: data.toAccountId,
+      isReconciliation: data.isReconciliation ?? false,
       tags: data.tagIds?.length
         ? { create: data.tagIds.map((tagId) => ({ tagId })) }
         : undefined,

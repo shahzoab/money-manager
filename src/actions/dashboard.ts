@@ -7,6 +7,7 @@ import { getPeriodRange, type Period } from "@/lib/periods";
 import { getTotalBalanceInCurrency } from "@/lib/balance";
 import { serializeAccount, serializeTransaction } from "@/lib/serialize";
 import { buildTransactionSummary } from "@/lib/transaction-summary";
+import { reportableTransactionWhere } from "@/lib/transaction-reports";
 import { TransactionType } from "@/generated/prisma/client";
 
 export async function getDashboardData(options?: {
@@ -49,7 +50,7 @@ export async function getDashboardData(options?: {
     getTotalBalanceInCurrency(userId, baseCurrency),
     db.transaction.groupBy({
       by: ["type"],
-      where,
+      where: { ...where, ...reportableTransactionWhere },
       _sum: { amountInBaseCurrency: true },
     }),
     db.transaction.findMany({
@@ -106,6 +107,7 @@ export async function getChartData(options?: {
         userId,
         date: { gte: from, lte: to },
         ...accountFilter,
+        ...reportableTransactionWhere,
       },
       include: { category: true },
     }),

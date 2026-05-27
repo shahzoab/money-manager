@@ -21,6 +21,7 @@ type TransactionRow = {
   amount: unknown;
   date: Date;
   comment: string | null;
+  isReconciliation?: boolean;
   category: { name: string; color: string; icon: string } | null;
   fromAccount: { name: string; currency: string } | null;
   toAccount: { name: string; currency: string } | null;
@@ -75,7 +76,14 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   {format(new Date(tx.date), showYear ? "MMM d, yyyy" : "MMM d")}
                 </td>
                 <td className="max-w-[120px] truncate px-3 py-4 sm:max-w-none sm:px-4 lg:py-3">
-                  <div className="truncate font-medium">{tx.comment || "—"}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="truncate font-medium">{tx.comment || "—"}</div>
+                    {tx.isReconciliation && (
+                      <span className="shrink-0 rounded bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground">
+                        Reconciliation
+                      </span>
+                    )}
+                  </div>
                   {tx.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {tx.tags.map(({ tag }) => (
@@ -91,11 +99,13 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   )}
                 </td>
                 <td className="hidden px-4 py-4 md:table-cell lg:py-3">
-                  {tx.category && (
+                  {tx.isReconciliation && !tx.category ? (
+                    <span className="text-sm text-muted-foreground">Balance adjustment</span>
+                  ) : tx.category ? (
                     <EntityBadge icon={tx.category.icon} color={tx.category.color} size="sm">
                       {tx.category.name}
                     </EntityBadge>
-                  )}
+                  ) : null}
                 </td>
                 <td className="hidden px-4 py-4 text-muted-foreground sm:table-cell lg:py-3">
                   {tx.type === TransactionType.TRANSFER

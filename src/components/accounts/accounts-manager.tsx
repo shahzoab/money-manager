@@ -17,7 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { ColorPickerField } from "@/components/ui/color-picker-field";
 import { PickerField } from "@/components/ui/picker-field";
-import { createAccount, updateAccount, deleteAccount } from "@/actions/accounts";
+import {
+  createAccount,
+  updateAccount,
+  deleteAccount,
+  reconcileAccountBalance,
+} from "@/actions/accounts";
 import { AccountsReorderSheet } from "@/components/accounts/accounts-reorder-sheet";
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { EntityActionsSheet } from "@/components/ui/entity-actions-sheet";
@@ -68,17 +73,31 @@ export function AccountsManager({
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [reconcilePending, startReconcileTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
 
   const [form, setForm] = useState(() => createEmptyForm(defaultCurrency));
+  const [reconcileTarget, setReconcileTarget] = useState("");
+  const [reconcileDate, setReconcileDate] = useState(() =>
+    new Date().toISOString().split("T")[0],
+  );
+  const [reconcileNote, setReconcileNote] = useState("");
+
+  function resetReconcileForm(account?: Account) {
+    setReconcileTarget(account ? String(account.balance) : "");
+    setReconcileDate(new Date().toISOString().split("T")[0]);
+    setReconcileNote("");
+  }
 
   function resetForm() {
     setForm(createEmptyForm(defaultCurrency));
     setEditing(null);
+    resetReconcileForm();
   }
 
   function openEdit(account: Account) {
     setEditing(account);
+    resetReconcileForm(account);
     setForm({
       name: account.name,
       currency: account.currency,
@@ -111,6 +130,51 @@ export function AccountsManager({
       }
     });
   }
+
+  function handleReconcile() {
+    if (!editing) return;
+    const targetBalance = parseFloat(reconcileTarget);
+    if (Number.isNaN(targetBalance)) {
+      toast.error("Enter a valid target balance");
+      return;
+    }
+
+    startReconcileTransition(async () => {
+      try {
+        const result = await reconcileAccountBalance({
+          accountId: editing.id,
+          targetBalance,
+          date: new Date(reconcileDate),
+          comment: reconcileNote || undefined,
+        });
+
+        if (!result.created) {
+          toast.info("Balance already matches target");
+          return;
+        }
+
+        toast.success("Balance reconciled");
+        setOpen(false);
+        resetForm();
+        window.location.reload();
+      } catch {
+        toast.error("Failed to reconcile balance");
+      }
+    });
+  }
+
+  const reconcileDelta =
+    editing && reconcileTarget !== ""
+      ? parseFloat(reconcileTarget) - editing.balance
+      : null;
+  const reconcilePreview =
+    editing && reconcileDelta != null && !Number.isNaN(reconcileDelta)
+      ? Math.abs(reconcileDelta) >= 0.0001
+        ? reconcileDelta > 0
+          ? `Will add +${formatMoney(reconcileDelta, editing.currency)} income`
+          : `Will add -${formatMoney(Math.abs(reconcileDelta), editing.currency)} expense`
+        : "Balance already matches target"
+      : null;
 
   const visibleAccounts = accounts.filter((a) => !a.isHidden);
   const hiddenAccounts = accounts.filter((a) => a.isHidden);
@@ -274,6 +338,60 @@ export function AccountsManager({
                   onCheckedChange={(v) => setForm({ ...form, isHidden: v })}
                 />
               </div>
+              {editing && (
+                <div className="space-y-4 border-t border-border/60 pt-4">
+                  <div>
+                    <h3 className="text-sm font-medium">Reconcile balance</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Creates a one-time adjustment in your transaction history. Does not change
+                      starting balance or income/expense reports.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Current balance</Label>
+                    <p className="text-lg font-semibold tabular-nums">
+                      {formatMoney(editing.balance, editing.currency)}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Target balance</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={reconcileTarget}
+                      onChange={(e) => setReconcileTarget(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={reconcileDate}
+                      onChange={(e) => setReconcileDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Note (optional)</Label>
+                    <Input
+                      value={reconcileNote}
+                      onChange={(e) => setReconcileNote(e.target.value)}
+                      placeholder="e.g. Bank statement Mar 2026"
+                    />
+                  </div>
+                  {reconcilePreview && (
+                    <p className="text-sm text-muted-foreground">{reconcilePreview}</p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    disabled={reconcilePending}
+                    onClick={handleReconcile}
+                  >
+                    Reconcile balance
+                  </Button>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={pending}>
                 {editing ? "Update" : "Create"}
               </Button>

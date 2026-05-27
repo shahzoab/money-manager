@@ -69,14 +69,21 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
             styles.ring,
           )}
         >
-          <div
-            className={cn(
-              "mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide",
-              styles.badge,
+          <div className="mx-auto mb-4 flex flex-wrap items-center justify-center gap-2">
+            <div
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide",
+                styles.badge,
+              )}
+            >
+              <TypeIcon className="h-3.5 w-3.5" />
+              {transactionTypeLabel(transaction.type)}
+            </div>
+            {transaction.isReconciliation && (
+              <span className="rounded-full bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
+                Reconciliation
+              </span>
             )}
-          >
-            <TypeIcon className="h-3.5 w-3.5" />
-            {transactionTypeLabel(transaction.type)}
           </div>
 
           <p
@@ -101,7 +108,9 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
         <dl className="rounded-xl border border-border/60 bg-surface px-4 py-1">
           {transaction.type !== TransactionType.TRANSFER && (
             <DetailRow label="Category">
-              {transaction.category ? (
+              {transaction.isReconciliation && !transaction.category ? (
+                "Balance adjustment"
+              ) : transaction.category ? (
                 <EntityBadge
                   icon={transaction.category.icon}
                   color={transaction.category.color}

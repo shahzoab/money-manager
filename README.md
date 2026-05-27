@@ -88,3 +88,9 @@ Open [http://localhost:3000](http://localhost:3000), register, and start trackin
 Deploy to Vercel with a hosted PostgreSQL (Neon, Supabase, Prisma Postgres). Set all env vars from `.env.example`.
 
 For pooled providers, set both `DATABASE_URL` (pooled, app runtime) and `DIRECT_URL` (direct, migrations). Vercel runs `prisma migrate deploy` automatically during `npm run build`.
+
+When deploying the baseline `0_init` migration to an existing production database, mark it as applied **before** the deploy that includes the migration file (do not re-run CREATE TABLE SQL on prod):
+
+```bash
+DIRECT_URL="your-prod-direct-url" npx prisma migrate resolve --applied 0_init
+```

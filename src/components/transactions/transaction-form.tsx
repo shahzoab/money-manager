@@ -294,6 +294,17 @@ export function TransactionForm({
             />
           </div>
 
+          <div className={formFieldGroupClass}>
+            <Label htmlFor="comment">Comment</Label>
+            <AutocompleteInput
+              id="comment"
+              value={comment}
+              onChange={setComment}
+              onSearch={getCommentSuggestions}
+              placeholder="What was this for?"
+            />
+          </div>
+
           {type !== TransactionType.TRANSFER && (
             <div className={formFieldGroupClass}>
               <Label>Category</Label>
@@ -307,17 +318,6 @@ export function TransactionForm({
               />
             </div>
           )}
-
-          <div className={formFieldGroupClass}>
-            <Label htmlFor="comment">Comment</Label>
-            <AutocompleteInput
-              id="comment"
-              value={comment}
-              onChange={setComment}
-              onSearch={getCommentSuggestions}
-              placeholder="What was this for?"
-            />
-          </div>
         </FormSection>
 
         <FormSection title="Account">

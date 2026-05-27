@@ -51,13 +51,20 @@ function createEmptyForm(defaultCurrency: string) {
   return {
     name: "",
     currency: defaultCurrency,
-    startingBalance: 0,
+    startingBalance: "",
     color: "#635BFF",
     icon: "wallet",
     isHidden: false,
     isDefault: false,
     notes: "",
   };
+}
+
+function parseStartingBalance(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "-" || trimmed === ".") return 0;
+  const parsed = parseFloat(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 export function AccountsManager({
@@ -73,8 +80,9 @@ export function AccountsManager({
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [reconcilePending, startReconcileTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
+
+  const BALANCE_EPSILON = 0.0001;
 
   const [form, setForm] = useState(() => createEmptyForm(defaultCurrency));
   const [reconcileTarget, setReconcileTarget] = useState("");
@@ -101,7 +109,7 @@ export function AccountsManager({
     setForm({
       name: account.name,
       currency: account.currency,
-      startingBalance: account.startingBalance,
+      startingBalance: String(account.startingBalance),
       color: account.color,
       icon: account.icon,
       isHidden: account.isHidden,
@@ -113,13 +121,41 @@ export function AccountsManager({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const startingBalance = parseStartingBalance(form.startingBalance);
+    if (startingBalance === null) {
+      toast.error("Enter a valid starting balance");
+      return;
+    }
+
+    const accountPayload = { ...form, startingBalance };
+
     startTransition(async () => {
       try {
         if (editing) {
-          await updateAccount(editing.id, form);
-          toast.success("Account updated");
+          const targetBalance = parseFloat(reconcileTarget);
+          if (Number.isNaN(targetBalance)) {
+            toast.error("Enter a valid target balance");
+            return;
+          }
+
+          await updateAccount(editing.id, accountPayload);
+
+          const needsReconcile =
+            Math.abs(targetBalance - editing.balance) >= BALANCE_EPSILON;
+
+          if (needsReconcile) {
+            await reconcileAccountBalance({
+              accountId: editing.id,
+              targetBalance,
+              date: new Date(reconcileDate),
+              comment: reconcileNote || undefined,
+            });
+            toast.success("Account updated and balance reconciled");
+          } else {
+            toast.success("Account updated");
+          }
         } else {
-          await createAccount(form);
+          await createAccount(accountPayload);
           toast.success("Account created");
         }
         setOpen(false);
@@ -131,45 +167,13 @@ export function AccountsManager({
     });
   }
 
-  function handleReconcile() {
-    if (!editing) return;
-    const targetBalance = parseFloat(reconcileTarget);
-    if (Number.isNaN(targetBalance)) {
-      toast.error("Enter a valid target balance");
-      return;
-    }
-
-    startReconcileTransition(async () => {
-      try {
-        const result = await reconcileAccountBalance({
-          accountId: editing.id,
-          targetBalance,
-          date: new Date(reconcileDate),
-          comment: reconcileNote || undefined,
-        });
-
-        if (!result.created) {
-          toast.info("Balance already matches target");
-          return;
-        }
-
-        toast.success("Balance reconciled");
-        setOpen(false);
-        resetForm();
-        window.location.reload();
-      } catch {
-        toast.error("Failed to reconcile balance");
-      }
-    });
-  }
-
   const reconcileDelta =
     editing && reconcileTarget !== ""
       ? parseFloat(reconcileTarget) - editing.balance
       : null;
   const reconcilePreview =
     editing && reconcileDelta != null && !Number.isNaN(reconcileDelta)
-      ? Math.abs(reconcileDelta) >= 0.0001
+      ? Math.abs(reconcileDelta) >= BALANCE_EPSILON
         ? reconcileDelta > 0
           ? `Will add +${formatMoney(reconcileDelta, editing.currency)} income`
           : `Will add -${formatMoney(Math.abs(reconcileDelta), editing.currency)} expense`
@@ -312,9 +316,7 @@ export function AccountsManager({
                   type="number"
                   step="0.01"
                   value={form.startingBalance}
-                  onChange={(e) =>
-                    setForm({ ...form, startingBalance: parseFloat(e.target.value) || 0 })
-                  }
+                  onChange={(e) => setForm({ ...form, startingBalance: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -381,15 +383,6 @@ export function AccountsManager({
                   {reconcilePreview && (
                     <p className="text-sm text-muted-foreground">{reconcilePreview}</p>
                   )}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="w-full"
-                    disabled={reconcilePending}
-                    onClick={handleReconcile}
-                  >
-                    Reconcile balance
-                  </Button>
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={pending}>

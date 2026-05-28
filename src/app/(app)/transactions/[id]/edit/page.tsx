@@ -22,6 +22,7 @@ export default async function EditTransactionPage({
   const initialValues = {
     type: transaction.type,
     amount: String(transaction.amount),
+    toAmount: transaction.toAmount != null ? String(transaction.toAmount) : "",
     date: format(new Date(transaction.date), "yyyy-MM-dd"),
     categoryId: transaction.categoryId ?? "",
     fromAccountId: transaction.fromAccountId ?? "",

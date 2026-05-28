@@ -19,6 +19,7 @@ type TransactionRow = {
   id: string;
   type: TransactionType;
   amount: unknown;
+  toAmount?: number | null;
   date: Date;
   comment: string | null;
   isReconciliation?: boolean;
@@ -122,10 +123,25 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   }`}
                 >
                   {tx.type === TransactionType.INCOME ? "+" : tx.type === TransactionType.EXPENSE ? "-" : ""}
-                  {formatMoney(
-                    Number(tx.amount),
-                    tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency,
-                    wholeNumberFormat,
+                  {tx.type === TransactionType.TRANSFER &&
+                  tx.fromAccount &&
+                  tx.toAccount &&
+                  tx.fromAccount.currency !== tx.toAccount.currency ? (
+                    <span className="text-sm">
+                      {formatMoney(Number(tx.amount), tx.fromAccount.currency, wholeNumberFormat)}
+                      <span className="mx-1 text-muted-foreground">→</span>
+                      {formatMoney(
+                        Number(tx.toAmount ?? tx.amount),
+                        tx.toAccount.currency,
+                        wholeNumberFormat,
+                      )}
+                    </span>
+                  ) : (
+                    formatMoney(
+                      Number(tx.amount),
+                      tx.fromAccount?.currency ?? tx.toAccount?.currency ?? currency,
+                      wholeNumberFormat,
+                    )
                   )}
                 </td>
                 <td className="hidden px-4 py-4 sm:table-cell lg:py-3">

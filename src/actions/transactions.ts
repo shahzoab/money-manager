@@ -15,6 +15,7 @@ import { reportableTransactionWhere } from "@/lib/transaction-reports";
 const transactionSchema = z.object({
   type: z.nativeEnum(TransactionType),
   amount: z.number().positive(),
+  toAmount: z.number().positive().optional(),
   date: z.coerce.date(),
   comment: z.string().optional(),
   photoUrl: z.string().optional(),
@@ -25,12 +26,36 @@ const transactionSchema = z.object({
   isReconciliation: z.boolean().optional(),
 });
 
-const transactionInclude = {
-  category: true,
-  fromAccount: true,
-  toAccount: true,
-  tags: { include: { tag: true } },
-} as const;
+async function resolveTransferToAmount(data: {
+  amount: number;
+  toAmount?: number;
+  fromAccountId?: string | null;
+  toAccountId?: string | null;
+}): Promise<number | undefined> {
+  if (!data.fromAccountId || !data.toAccountId) return undefined;
+
+  const [fromAccount, toAccount] = await Promise.all([
+    db.walletAccount.findUnique({ where: { id: data.fromAccountId } }),
+    db.walletAccount.findUnique({ where: { id: data.toAccountId } }),
+  ]);
+
+  if (!fromAccount || !toAccount) return undefined;
+
+  if (fromAccount.currency === toAccount.currency) {
+    return data.amount;
+  }
+
+  if (data.toAmount != null) {
+    return data.toAmount;
+  }
+
+  const { converted } = await convertAmount(
+    data.amount,
+    fromAccount.currency,
+    toAccount.currency,
+  );
+  return converted;
+}
 
 async function computeBaseCurrencyAmount(
   baseCurrency: string,
@@ -44,17 +69,12 @@ async function computeBaseCurrencyAmount(
   let amountInBaseCurrency = data.amount;
   let exchangeRate: number | undefined;
 
-  if (data.type === TransactionType.TRANSFER && data.fromAccountId && data.toAccountId) {
-    const [fromAccount, toAccount] = await Promise.all([
-      db.walletAccount.findUnique({ where: { id: data.fromAccountId } }),
-      db.walletAccount.findUnique({ where: { id: data.toAccountId } }),
-    ]);
+  if (data.type === TransactionType.TRANSFER && data.fromAccountId) {
+    const fromAccount = await db.walletAccount.findUnique({
+      where: { id: data.fromAccountId },
+    });
     if (fromAccount && fromAccount.currency !== baseCurrency) {
       const result = await convertAmount(data.amount, fromAccount.currency, baseCurrency);
-      amountInBaseCurrency = result.converted;
-      exchangeRate = result.rate;
-    } else if (toAccount && toAccount.currency !== baseCurrency) {
-      const result = await convertAmount(data.amount, toAccount.currency, baseCurrency);
       amountInBaseCurrency = result.converted;
       exchangeRate = result.rate;
     }
@@ -72,6 +92,58 @@ async function computeBaseCurrencyAmount(
 
   return { amountInBaseCurrency, exchangeRate };
 }
+
+export async function previewTransferConversion(
+  fromCurrency: string,
+  toCurrency: string,
+  amount: number,
+): Promise<{ converted: number; rate: number }> {
+  await requireSession();
+  return convertAmount(amount, fromCurrency, toCurrency);
+}
+
+export async function backfillTransferToAmounts(userId: string) {
+  const transfers = await db.transaction.findMany({
+    where: {
+      userId,
+      type: TransactionType.TRANSFER,
+      toAmount: null,
+      fromAccountId: { not: null },
+      toAccountId: { not: null },
+    },
+    select: {
+      id: true,
+      amount: true,
+      fromAccount: { select: { currency: true } },
+      toAccount: { select: { currency: true } },
+    },
+  });
+
+  for (const tx of transfers) {
+    const fromCurrency = tx.fromAccount?.currency;
+    const toCurrency = tx.toAccount?.currency;
+    if (!fromCurrency || !toCurrency) continue;
+
+    const toAmount =
+      fromCurrency === toCurrency
+        ? Number(tx.amount)
+        : (
+            await convertAmount(Number(tx.amount), fromCurrency, toCurrency)
+          ).converted;
+
+    await db.transaction.update({
+      where: { id: tx.id },
+      data: { toAmount },
+    });
+  }
+}
+
+const transactionInclude = {
+  category: true,
+  fromAccount: true,
+  toAccount: true,
+  tags: { include: { tag: true } },
+} as const;
 
 export async function recalculateStaleBaseCurrencyAmounts(userId: string, baseCurrency: string) {
   const transactions = await db.transaction.findMany({
@@ -231,6 +303,10 @@ export async function createTransaction(input: z.infer<typeof transactionSchema>
     where: { userId: session.user.id },
   });
   const baseCurrency = settings?.defaultCurrency ?? "USD";
+  const toAmount =
+    data.type === TransactionType.TRANSFER
+      ? await resolveTransferToAmount(data)
+      : undefined;
   const { amountInBaseCurrency, exchangeRate } = await computeBaseCurrencyAmount(baseCurrency, data);
 
   const transaction = await db.transaction.create({
@@ -238,6 +314,7 @@ export async function createTransaction(input: z.infer<typeof transactionSchema>
       userId: session.user.id,
       type: data.type,
       amount: data.amount,
+      toAmount,
       amountInBaseCurrency,
       exchangeRate,
       date: data.date,
@@ -278,6 +355,12 @@ export async function updateTransaction(
   const merged = {
     type: data.type ?? existing.type,
     amount: data.amount ?? Number(existing.amount),
+    toAmount:
+      data.toAmount !== undefined
+        ? data.toAmount
+        : existing.toAmount != null
+          ? Number(existing.toAmount)
+          : undefined,
     fromAccountId:
       data.fromAccountId !== undefined ? data.fromAccountId : existing.fromAccountId,
     toAccountId: data.toAccountId !== undefined ? data.toAccountId : existing.toAccountId,
@@ -285,12 +368,14 @@ export async function updateTransaction(
 
   const shouldRecalculate =
     data.amount !== undefined ||
+    data.toAmount !== undefined ||
     data.type !== undefined ||
     data.fromAccountId !== undefined ||
     data.toAccountId !== undefined;
 
   let amountInBaseCurrency: number | undefined;
   let exchangeRate: number | undefined;
+  let resolvedToAmount: number | undefined | null;
 
   if (shouldRecalculate) {
     const settings = await db.userSettings.findUnique({
@@ -300,6 +385,10 @@ export async function updateTransaction(
     const converted = await computeBaseCurrencyAmount(baseCurrency, merged);
     amountInBaseCurrency = converted.amountInBaseCurrency;
     exchangeRate = converted.exchangeRate;
+    resolvedToAmount =
+      merged.type === TransactionType.TRANSFER
+        ? await resolveTransferToAmount(merged)
+        : null;
   }
 
   const transaction = await db.$transaction(async (tx) => {
@@ -312,6 +401,7 @@ export async function updateTransaction(
       data: {
         ...(data.type && { type: data.type }),
         ...(data.amount !== undefined && { amount: data.amount }),
+        ...(shouldRecalculate && resolvedToAmount !== undefined && { toAmount: resolvedToAmount }),
         ...(data.date && { date: data.date }),
         ...(data.comment !== undefined && { comment: data.comment }),
         ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl }),

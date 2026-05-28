@@ -45,6 +45,11 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
   const TypeIcon = transactionTypeIcon(transaction.type);
   const accountCurrency =
     transaction.fromAccount?.currency ?? transaction.toAccount?.currency ?? currency;
+  const isCrossCurrencyTransfer =
+    transaction.type === TransactionType.TRANSFER &&
+    !!transaction.fromAccount &&
+    !!transaction.toAccount &&
+    transaction.fromAccount.currency !== transaction.toAccount.currency;
 
   function handleDelete() {
     startTransition(async () => {
@@ -92,8 +97,25 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
               styles.amount,
             )}
           >
-            {styles.prefix}
-            {formatMoney(transaction.amount, accountCurrency)}
+            {isCrossCurrencyTransfer ? (
+              <span className="flex flex-col items-center gap-2 text-3xl sm:text-4xl">
+                <span>
+                  {formatMoney(transaction.amount, transaction.fromAccount!.currency)}
+                </span>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <span>
+                  {formatMoney(
+                    transaction.toAmount ?? transaction.amount,
+                    transaction.toAccount!.currency,
+                  )}
+                </span>
+              </span>
+            ) : (
+              <>
+                {styles.prefix}
+                {formatMoney(transaction.amount, accountCurrency)}
+              </>
+            )}
           </p>
 
           {transaction.comment ? (

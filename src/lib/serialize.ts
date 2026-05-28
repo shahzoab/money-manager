@@ -22,6 +22,7 @@ export function serializeCategory<T extends { monthlyLimit: unknown }>(category:
 export function serializeTransaction<
   T extends {
     amount: unknown;
+    toAmount?: unknown;
     amountInBaseCurrency: unknown;
     exchangeRate: unknown;
     category?: { monthlyLimit: unknown } | null;
@@ -32,6 +33,7 @@ export function serializeTransaction<
   return {
     ...transaction,
     amount: Number(transaction.amount),
+    toAmount: toNumber(transaction.toAmount as DecimalLike | null | undefined),
     amountInBaseCurrency: Number(transaction.amountInBaseCurrency),
     exchangeRate: toNumber(transaction.exchangeRate as DecimalLike | null),
     category: transaction.category ? serializeCategory(transaction.category) : null,

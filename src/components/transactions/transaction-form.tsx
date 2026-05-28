@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PickerField } from "@/components/ui/picker-field";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCommentSuggestions } from "@/actions/transactions";
+import { getCommentSuggestions, previewTransferConversion } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { getCategories } from "@/actions/categories";
 import { AmountCalculator } from "@/components/transactions/amount-calculator";
@@ -22,6 +22,7 @@ import { toast } from "sonner";
 export type TransactionFormValues = {
   type: TransactionType;
   amount: string;
+  toAmount: string;
   date: string;
   categoryId: string;
   fromAccountId: string;
@@ -33,6 +34,7 @@ export type TransactionFormValues = {
 export type TransactionFormSubmitData = {
   type: TransactionType;
   amount: number;
+  toAmount?: number;
   date: Date;
   comment?: string;
   photoUrl?: string;
@@ -54,6 +56,7 @@ type TransactionFormProps = {
 const emptyValues: TransactionFormValues = {
   type: TransactionType.EXPENSE,
   amount: "",
+  toAmount: "",
   date: new Date().toISOString().split("T")[0],
   categoryId: "",
   fromAccountId: "",
@@ -92,10 +95,17 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const amountInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const skipAccountConversionReset = useRef(!!initialValues?.toAmount);
   const [type, setType] = useState<TransactionType>(
     initialValues?.type ?? emptyValues.type,
   );
   const [amount, setAmount] = useState(initialValues?.amount ?? emptyValues.amount);
+  const [toAmount, setToAmount] = useState(initialValues?.toAmount ?? emptyValues.toAmount);
+  const [lastEditedAmountField, setLastEditedAmountField] = useState<"from" | "to">(
+    initialValues?.toAmount ? "to" : "from",
+  );
+  const [transferRate, setTransferRate] = useState<number | null>(null);
+  const [converting, setConverting] = useState(false);
   const [comment, setComment] = useState(initialValues?.comment ?? emptyValues.comment);
   const [date, setDate] = useState(initialValues?.date ?? emptyValues.date);
   const [categoryId, setCategoryId] = useState(
@@ -165,6 +175,64 @@ export function TransactionForm({
     ),
   }));
 
+  const fromAccount = accounts.find((a) => a.id === fromAccountId);
+  const toAccount = accounts.find((a) => a.id === toAccountId);
+  const isCrossCurrencyTransfer =
+    type === TransactionType.TRANSFER &&
+    !!fromAccount &&
+    !!toAccount &&
+    fromAccount.currency !== toAccount.currency;
+
+  useEffect(() => {
+    if (!isCrossCurrencyTransfer || !fromAccount || !toAccount) {
+      setTransferRate(null);
+      return;
+    }
+
+    if (lastEditedAmountField !== "from") return;
+
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      setToAmount("");
+      setTransferRate(null);
+      return;
+    }
+
+    setConverting(true);
+    const timer = setTimeout(() => {
+      previewTransferConversion(fromAccount.currency, toAccount.currency, numAmount)
+        .then(({ converted, rate }) => {
+          setToAmount(String(Math.round(converted * 100) / 100));
+          setTransferRate(rate);
+        })
+        .catch(() => {
+          toast.error("Failed to fetch exchange rate");
+        })
+        .finally(() => setConverting(false));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [
+    amount,
+    fromAccount,
+    toAccount,
+    isCrossCurrencyTransfer,
+    lastEditedAmountField,
+  ]);
+
+  useEffect(() => {
+    if (!isCrossCurrencyTransfer) {
+      setToAmount("");
+      setTransferRate(null);
+      return;
+    }
+    if (skipAccountConversionReset.current) {
+      skipAccountConversionReset.current = false;
+      return;
+    }
+    setLastEditedAmountField("from");
+  }, [fromAccountId, toAccountId, isCrossCurrencyTransfer]);
+
   function handlePhotoChange(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
@@ -198,9 +266,18 @@ export function TransactionForm({
       return;
     }
 
+    if (isCrossCurrencyTransfer) {
+      const numToAmount = parseFloat(toAmount);
+      if (!numToAmount || numToAmount <= 0) {
+        toast.error("Enter a valid received amount");
+        return;
+      }
+    }
+
     onSubmit({
       type,
       amount: numAmount,
+      ...(isCrossCurrencyTransfer && { toAmount: parseFloat(toAmount) }),
       date: new Date(date),
       comment: comment || undefined,
       photoUrl: photoUrl || undefined,
@@ -246,40 +323,137 @@ export function TransactionForm({
       </Tabs>
 
       <form id="transaction-form" onSubmit={handleSubmit} className="mt-6 space-y-6 pb-28 lg:pb-0">
+        {type === TransactionType.TRANSFER && (
+          <FormSection title="Account">
+            <div className={formFieldGroupClass}>
+              <Label>From Account</Label>
+              <PickerField
+                value={fromAccountId}
+                onValueChange={setFromAccountId}
+                options={accountOptions}
+                placeholder="Select account"
+                title="Select account"
+                emptyMessage="No accounts yet — add one in Settings"
+              />
+            </div>
+            <div className={formFieldGroupClass}>
+              <Label>To Account</Label>
+              <PickerField
+                value={toAccountId}
+                onValueChange={setToAccountId}
+                options={accountOptions}
+                placeholder="Select account"
+                title="Select destination"
+                emptyMessage="No accounts yet — add one in Settings"
+              />
+            </div>
+          </FormSection>
+        )}
+
         <div
           className={cn(
             "rounded-2xl border border-border/60 bg-surface-elevated/50 px-4 py-6 text-center ring-1 ring-inset",
             typeStyles.ring,
           )}
         >
-          <Label htmlFor="amount" className="sr-only">
-            Amount
-          </Label>
-          <div className="flex w-full items-center justify-center gap-1">
-            {typeStyles.prefix ? (
-              <span className={cn("shrink-0 text-3xl font-semibold tabular-nums", typeStyles.amount)}>
-                {typeStyles.prefix}
-              </span>
-            ) : null}
-            <Input
-              ref={amountInputRef}
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className={cn(
-                "h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-center text-4xl font-bold tabular-nums shadow-none focus-visible:ring-0 sm:text-5xl",
-                typeStyles.amount,
-              )}
-              required
-            />
-          </div>
+          {isCrossCurrencyTransfer ? (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="amount" className="mb-2 block text-sm text-muted-foreground">
+                  Amount ({fromAccount?.currency})
+                </Label>
+                <div className="flex w-full items-center justify-center gap-1">
+                  <Input
+                    ref={amountInputRef}
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => {
+                      setLastEditedAmountField("from");
+                      setAmount(e.target.value);
+                    }}
+                    placeholder="0.00"
+                    className={cn(
+                      "h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-center text-3xl font-bold tabular-nums shadow-none focus-visible:ring-0 sm:text-4xl",
+                      typeStyles.amount,
+                    )}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="border-t border-border/50 pt-4">
+                <Label htmlFor="toAmount" className="mb-2 block text-sm text-muted-foreground">
+                  Received ({toAccount?.currency})
+                </Label>
+                <div className="flex w-full items-center justify-center gap-1">
+                  <Input
+                    id="toAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={toAmount}
+                    onChange={(e) => {
+                      setLastEditedAmountField("to");
+                      setToAmount(e.target.value);
+                    }}
+                    placeholder="0.00"
+                    className={cn(
+                      "h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-center text-3xl font-bold tabular-nums shadow-none focus-visible:ring-0 sm:text-4xl",
+                      typeStyles.amount,
+                    )}
+                    required
+                  />
+                </div>
+              </div>
+              {transferRate != null && fromAccount && toAccount ? (
+                <p className="text-xs text-muted-foreground">
+                  {converting
+                    ? "Updating rate..."
+                    : `1 ${fromAccount.currency} = ${transferRate.toFixed(4)} ${toAccount.currency}`}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <Label htmlFor="amount" className="sr-only">
+                Amount
+              </Label>
+              <div className="flex w-full items-center justify-center gap-1">
+                {typeStyles.prefix ? (
+                  <span className={cn("shrink-0 text-3xl font-semibold tabular-nums", typeStyles.amount)}>
+                    {typeStyles.prefix}
+                  </span>
+                ) : null}
+                <Input
+                  ref={amountInputRef}
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={cn(
+                    "h-auto min-w-0 flex-1 border-0 bg-transparent p-0 text-center text-4xl font-bold tabular-nums shadow-none focus-visible:ring-0 sm:text-5xl",
+                    typeStyles.amount,
+                  )}
+                  required
+                />
+              </div>
+            </>
+          )}
           <div className="mt-3 flex justify-center">
-            <AmountCalculator onResult={(v) => setAmount(String(v))} />
+            <AmountCalculator
+              onResult={(v) => {
+                setLastEditedAmountField("from");
+                setAmount(String(v));
+              }}
+            />
           </div>
         </div>
 
@@ -320,37 +494,37 @@ export function TransactionForm({
           )}
         </FormSection>
 
-        <FormSection title="Account">
-          {(type === TransactionType.EXPENSE || type === TransactionType.TRANSFER) && (
-            <div className={formFieldGroupClass}>
-              <Label>From Account</Label>
-              <PickerField
-                value={fromAccountId}
-                onValueChange={setFromAccountId}
-                options={accountOptions}
-                placeholder="Select account"
-                title="Select account"
-                emptyMessage="No accounts yet — add one in Settings"
-              />
-            </div>
-          )}
+        {type !== TransactionType.TRANSFER && (
+          <FormSection title="Account">
+            {type === TransactionType.EXPENSE && (
+              <div className={formFieldGroupClass}>
+                <Label>From Account</Label>
+                <PickerField
+                  value={fromAccountId}
+                  onValueChange={setFromAccountId}
+                  options={accountOptions}
+                  placeholder="Select account"
+                  title="Select account"
+                  emptyMessage="No accounts yet — add one in Settings"
+                />
+              </div>
+            )}
 
-          {(type === TransactionType.INCOME || type === TransactionType.TRANSFER) && (
-            <div className={formFieldGroupClass}>
-              <Label>
-                {type === TransactionType.TRANSFER ? "To Account" : "Account"}
-              </Label>
-              <PickerField
-                value={toAccountId}
-                onValueChange={setToAccountId}
-                options={accountOptions}
-                placeholder="Select account"
-                title={type === TransactionType.TRANSFER ? "Select destination" : "Select account"}
-                emptyMessage="No accounts yet — add one in Settings"
-              />
-            </div>
-          )}
-        </FormSection>
+            {type === TransactionType.INCOME && (
+              <div className={formFieldGroupClass}>
+                <Label>Account</Label>
+                <PickerField
+                  value={toAccountId}
+                  onValueChange={setToAccountId}
+                  options={accountOptions}
+                  placeholder="Select account"
+                  title="Select account"
+                  emptyMessage="No accounts yet — add one in Settings"
+                />
+              </div>
+            )}
+          </FormSection>
+        )}
 
         <FormSection title="Receipt">
           <input

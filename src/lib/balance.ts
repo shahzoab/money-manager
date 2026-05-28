@@ -6,6 +6,7 @@ import { convertAmount } from "@/lib/currency";
 type TxRow = {
   type: TransactionType;
   amount: number;
+  toAmount?: number | null;
   fromAccountId: string | null;
   toAccountId: string | null;
 };
@@ -27,7 +28,7 @@ export function computeAccountBalanceFromTransactions(
       balance -= tx.amount;
     } else if (tx.type === TransactionType.TRANSFER) {
       if (tx.fromAccountId === accountId) balance -= tx.amount;
-      if (tx.toAccountId === accountId) balance += tx.amount;
+      if (tx.toAccountId === accountId) balance += tx.toAmount ?? tx.amount;
     }
   }
 
@@ -46,6 +47,7 @@ export async function getAccountBalance(accountId: string): Promise<number> {
     select: {
       type: true,
       amount: true,
+      toAmount: true,
       fromAccountId: true,
       toAccountId: true,
     },
@@ -57,6 +59,7 @@ export async function getAccountBalance(accountId: string): Promise<number> {
     transactions.map((t) => ({
       type: t.type,
       amount: Number(t.amount),
+      toAmount: t.toAmount != null ? Number(t.toAmount) : null,
       fromAccountId: t.fromAccountId,
       toAccountId: t.toAccountId,
     })),

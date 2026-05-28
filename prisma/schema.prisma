@@ -171,6 +171,7 @@ model Transaction {
   user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   type                 TransactionType
   amount               Decimal         @db.Decimal(18, 4)
+  toAmount             Decimal?        @db.Decimal(18, 4)
   amountInBaseCurrency Decimal         @db.Decimal(18, 4)
   exchangeRate         Decimal?        @db.Decimal(18, 8)
   date                 DateTime

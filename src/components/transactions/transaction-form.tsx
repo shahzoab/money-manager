@@ -221,17 +221,34 @@ export function TransactionForm({
   ]);
 
   useEffect(() => {
-    if (!isCrossCurrencyTransfer) {
+    if (type !== TransactionType.TRANSFER) {
       setToAmount("");
       setTransferRate(null);
       return;
     }
-    if (skipAccountConversionReset.current) {
-      skipAccountConversionReset.current = false;
+
+    if (accounts.length === 0 || !fromAccount || !toAccount) {
       return;
     }
+
+    if (fromAccount.currency === toAccount.currency) {
+      setToAmount("");
+      setTransferRate(null);
+      return;
+    }
+
+    if (skipAccountConversionReset.current) {
+      skipAccountConversionReset.current = false;
+      const numAmount = parseFloat(amount);
+      const numToAmount = parseFloat(toAmount);
+      if (numAmount > 0 && numToAmount > 0) {
+        setTransferRate(numToAmount / numAmount);
+      }
+      return;
+    }
+
     setLastEditedAmountField("from");
-  }, [fromAccountId, toAccountId, isCrossCurrencyTransfer]);
+  }, [type, fromAccountId, toAccountId, accounts.length, fromAccount, toAccount]);
 
   function handlePhotoChange(file: File | undefined) {
     if (!file) return;

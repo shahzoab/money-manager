@@ -63,6 +63,12 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+async function getServiceWorkerRegistration() {
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing) return existing;
+  return navigator.serviceWorker.register("/sw.js");
+}
+
 type Settings = {
   defaultCurrency: string;
   decimalSeparator: DecimalSeparator;
@@ -122,32 +128,73 @@ export function SettingsPanel({
   }
 
   async function subscribePush() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      toast.error("Push notifications not supported");
-      return;
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        toast.error("Push notifications not supported");
+        return;
+      }
+
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        toast.error("VAPID public key is not configured");
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+
+      await getServiceWorkerRegistration();
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+        });
+        await existing.unsubscribe();
+      }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      const response = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to save push subscription");
+      }
+
+      toast.success("Push notifications enabled");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to enable push");
     }
+  }
 
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!publicKey) {
-      toast.error("VAPID public key is not configured");
-      return;
+  async function sendTestPush() {
+    try {
+      const response = await fetch("/api/push/subscribe", { method: "PUT" });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Failed to send test notification");
+      }
+
+      if (!data.sent) {
+        toast.error("No push subscriptions found. Enable push first.");
+        return;
+      }
+
+      toast.success("Test notification sent");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send test notification");
     }
-
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
-
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-
-    await fetch("/api/push/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sub.toJSON()),
-    });
-    toast.success("Push notifications enabled");
   }
 
   return (
@@ -264,6 +311,10 @@ export function SettingsPanel({
           <Button variant="outline" className="w-full gap-2" onClick={subscribePush}>
             <Bell className="h-4 w-4" />
             Enable Push Reminders
+          </Button>
+          <Button variant="outline" className="w-full gap-2" onClick={sendTestPush}>
+            <Bell className="h-4 w-4" />
+            Send Test Notification
           </Button>
         </CardContent>
       </Card>

@@ -135,11 +135,20 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     if (!transaction) continue;
 
     processed += 1;
-    await sendPushNotificationToUser(payment.userId, {
+    const pushResult = await sendPushNotificationToUser(payment.userId, {
       title: "Recurring payment processed",
       body: `${payment.comment ?? "Recurring payment"} - ${amount.toFixed(2)}`,
       url: `/transactions/${transaction.id}`,
     });
+
+    if (pushResult.skipped || pushResult.sent === 0) {
+      console.warn("Recurring payment processed without push delivery", {
+        recurringPaymentId: payment.id,
+        transactionId: transaction.id,
+        userId: payment.userId,
+        pushResult,
+      });
+    }
   }
 
   return processed;

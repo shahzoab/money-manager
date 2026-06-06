@@ -7,6 +7,13 @@ export async function POST(request: Request) {
   const session = await requireSession();
   const body = await request.json();
 
+  if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
+    return NextResponse.json(
+      { error: "Invalid push subscription" },
+      { status: 400 },
+    );
+  }
+
   const subscription = await db.pushSubscription.upsert({
     where: { endpoint: body.endpoint },
     create: {
@@ -16,6 +23,7 @@ export async function POST(request: Request) {
       auth: body.keys.auth,
     },
     update: {
+      userId: session.user.id,
       p256dh: body.keys.p256dh,
       auth: body.keys.auth,
     },
@@ -41,22 +49,20 @@ export async function PUT() {
   }
 
   const session = await requireSession();
-  const upcoming = await db.recurringPayment.findMany({
-    where: {
-      userId: session.user.id,
-      isActive: true,
-      reminderAt: { lte: new Date() },
-    },
-    take: 5,
+
+  const subscriptionCount = await db.pushSubscription.count({
+    where: { userId: session.user.id },
   });
 
-  for (const payment of upcoming) {
-    await sendPushNotificationToUser(session.user.id, {
-      title: "Payment Reminder",
-      body: `${payment.comment ?? "Recurring payment"} - ${Number(payment.amount).toFixed(2)}`,
-      url: `/recurring?id=${payment.id}`,
-    });
+  if (subscriptionCount === 0) {
+    return NextResponse.json({ sent: 0 });
   }
 
-  return NextResponse.json({ sent: upcoming.length });
+  const result = await sendPushNotificationToUser(session.user.id, {
+    title: "Money Manager test",
+    body: "Push notifications are working.",
+    url: "/settings",
+  });
+
+  return NextResponse.json({ sent: result.sent });
 }

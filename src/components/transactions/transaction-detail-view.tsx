@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { createElement, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ArrowRight, Pencil, Trash2 } from "lucide-react";
@@ -42,7 +42,6 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const styles = transactionTypeStyles(transaction.type);
-  const TypeIcon = transactionTypeIcon(transaction.type);
   const accountCurrency =
     transaction.fromAccount?.currency ?? transaction.toAccount?.currency ?? currency;
   const isCrossCurrencyTransfer =
@@ -67,7 +66,7 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
 
   return (
     <>
-      <div className="space-y-6 pb-24 lg:pb-0">
+      <div className="space-y-6">
         <div
           className={cn(
             "rounded-2xl border border-border/60 bg-surface-elevated/50 p-6 text-center ring-1 ring-inset",
@@ -81,7 +80,9 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
                 styles.badge,
               )}
             >
-              <TypeIcon className="h-3.5 w-3.5" />
+              {createElement(transactionTypeIcon(transaction.type), {
+                className: "h-3.5 w-3.5",
+              })}
               {transactionTypeLabel(transaction.type)}
             </div>
             {transaction.isReconciliation && (
@@ -203,29 +204,7 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
           )}
         </p>
 
-        <div className="hidden gap-2 lg:flex">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => router.push(`/transactions/${transaction.id}/edit`)}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 text-red-400 hover:text-red-400"
-            disabled={pending}
-            onClick={() => setConfirmOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 backdrop-blur-md lg:hidden">
-        <div className="mx-auto flex max-w-lg gap-2">
+        <div className="flex gap-2">
           <Button
             variant="outline"
             className="flex-1"

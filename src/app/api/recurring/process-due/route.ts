@@ -17,14 +17,14 @@ async function processDueRequest(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const processed = await processDueRecurringPaymentsForUser();
+  const result = await processDueRecurringPaymentsForUser();
 
   revalidatePath("/recurring");
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/charts");
 
-  return NextResponse.json({ processed });
+  return NextResponse.json(result);
 }
 
 export async function GET(request: Request) {

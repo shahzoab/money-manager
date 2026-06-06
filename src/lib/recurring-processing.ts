@@ -13,6 +13,12 @@ import { convertAmount } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { sendPushNotificationToUser } from "@/lib/push";
 
+export type RecurringProcessingResult = {
+  created: number;
+  notified: number;
+  processed: number;
+};
+
 function getNextDueDate(date: Date, frequency: RecurringFrequency): Date {
   switch (frequency) {
     case RecurringFrequency.DAILY:
@@ -85,13 +91,49 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     orderBy: { nextDueDate: "asc" },
   });
 
-  let processed = 0;
+  const result: RecurringProcessingResult = {
+    created: 0,
+    notified: 0,
+    processed: 0,
+  };
 
   for (const payment of duePayments) {
     const amount = Number(payment.amount);
     const accountId = payment.accountId;
     const occurrenceDate = payment.nextDueDate;
     const nextDueDate = getNextDueDate(occurrenceDate, payment.frequency);
+
+    if (!payment.autoCreate) {
+      const claim = await db.recurringPayment.updateMany({
+        where: {
+          id: payment.id,
+          isActive: true,
+          nextDueDate: occurrenceDate,
+        },
+        data: { nextDueDate },
+      });
+
+      if (claim.count === 0) continue;
+
+      result.notified += 1;
+      result.processed += 1;
+      const pushResult = await sendPushNotificationToUser(payment.userId, {
+        title: "Recurring payment due",
+        body: `${payment.comment ?? "Recurring payment"} - ${amount.toFixed(2)}`,
+        url: "/recurring",
+      });
+
+      if (pushResult.skipped || pushResult.sent === 0) {
+        console.warn("Recurring payment due without push delivery", {
+          recurringPaymentId: payment.id,
+          userId: payment.userId,
+          pushResult,
+        });
+      }
+
+      continue;
+    }
+
     const isExpense = payment.type === TransactionType.EXPENSE;
     const isIncome = payment.type === TransactionType.INCOME;
     const { amountInBaseCurrency, exchangeRate } = await resolveBaseAmount({
@@ -134,7 +176,8 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
 
     if (!transaction) continue;
 
-    processed += 1;
+    result.created += 1;
+    result.processed += 1;
     const pushResult = await sendPushNotificationToUser(payment.userId, {
       title: "Recurring payment processed",
       body: `${payment.comment ?? "Recurring payment"} - ${amount.toFixed(2)}`,
@@ -151,5 +194,5 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     }
   }
 
-  return processed;
+  return result;
 }

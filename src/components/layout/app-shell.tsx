@@ -75,7 +75,6 @@ function isTransactionFormPage(pathname: string) {
 
 function shouldHideFab(pathname: string) {
   if (isTransactionFormPage(pathname)) return true;
-  if (/^\/transactions\/[^/]+$/.test(pathname)) return true;
   return false;
 }
 

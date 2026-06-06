@@ -10,13 +10,9 @@ import {
 } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
+import { processDueRecurringPaymentsForUser } from "@/lib/recurring-processing";
 import { serializeRecurringPayment } from "@/lib/serialize";
-import {
-  addDays,
-  addWeeks,
-  addMonths,
-  addYears,
-} from "date-fns";
+import { addDays } from "date-fns";
 
 const recurringSchema = z.object({
   type: z.nativeEnum(TransactionType),
@@ -24,25 +20,12 @@ const recurringSchema = z.object({
   frequency: z.nativeEnum(RecurringFrequency),
   nextDueDate: z.coerce.date(),
   reminderAt: z.coerce.date().optional(),
-  autoCreate: z.boolean().default(false),
+  autoCreate: z.boolean().default(true),
   comment: z.string().optional(),
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
   tagIds: z.array(z.string()).optional(),
 });
-
-function getNextDueDate(date: Date, frequency: RecurringFrequency): Date {
-  switch (frequency) {
-    case RecurringFrequency.DAILY:
-      return addDays(date, 1);
-    case RecurringFrequency.WEEKLY:
-      return addWeeks(date, 1);
-    case RecurringFrequency.MONTHLY:
-      return addMonths(date, 1);
-    case RecurringFrequency.YEARLY:
-      return addYears(date, 1);
-  }
-}
 
 export async function getRecurringPayments(search?: string) {
   const session = await requireSession();
@@ -93,7 +76,7 @@ export async function createRecurringPayment(
       frequency: data.frequency,
       nextDueDate: data.nextDueDate,
       reminderAt: data.reminderAt,
-      autoCreate: data.autoCreate,
+      autoCreate: true,
       comment: data.comment,
       categoryId: data.categoryId,
       accountId: data.accountId,
@@ -114,9 +97,31 @@ export async function updateRecurringPayment(
   const session = await requireSession();
   const data = recurringSchema.partial().parse(input);
 
-  const payment = await db.recurringPayment.update({
-    where: { id, userId: session.user.id },
-    data,
+  const { tagIds, ...paymentData } = data;
+  const payment = await db.$transaction(async (tx) => {
+    await tx.recurringPayment.findFirstOrThrow({
+      where: { id, userId: session.user.id },
+      select: { id: true },
+    });
+
+    if (tagIds !== undefined) {
+      await tx.recurringPaymentTag.deleteMany({
+        where: { recurringPaymentId: id },
+      });
+    }
+
+    return tx.recurringPayment.update({
+      where: { id, userId: session.user.id },
+      data: {
+        ...paymentData,
+        ...(paymentData.autoCreate !== undefined && { autoCreate: true }),
+        ...(tagIds !== undefined && {
+          tags: tagIds.length
+            ? { create: tagIds.map((tagId) => ({ tagId })) }
+            : undefined,
+        }),
+      },
+    });
   });
 
   revalidatePath("/recurring");
@@ -134,42 +139,13 @@ export async function deleteRecurringPayment(id: string) {
 
 export async function processDueRecurringPayments() {
   const session = await requireSession();
-  const due = await db.recurringPayment.findMany({
-    where: {
-      userId: session.user.id,
-      isActive: true,
-      autoCreate: true,
-      nextDueDate: { lte: new Date() },
-    },
-  });
-
-  const { createTransaction } = await import("@/actions/transactions");
-
-  for (const payment of due) {
-    const isExpense = payment.type === TransactionType.EXPENSE;
-    const isIncome = payment.type === TransactionType.INCOME;
-
-    await createTransaction({
-      type: payment.type,
-      amount: Number(payment.amount),
-      date: payment.nextDueDate,
-      comment: payment.comment ?? undefined,
-      categoryId: payment.categoryId ?? undefined,
-      fromAccountId: isExpense ? payment.accountId ?? undefined : undefined,
-      toAccountId: isIncome ? payment.accountId ?? undefined : undefined,
-    });
-
-    await db.recurringPayment.update({
-      where: { id: payment.id },
-      data: {
-        nextDueDate: getNextDueDate(payment.nextDueDate, payment.frequency),
-      },
-    });
-  }
+  const count = await processDueRecurringPaymentsForUser(session.user.id);
 
   revalidatePath("/recurring");
   revalidatePath("/transactions");
-  return due.length;
+  revalidatePath("/dashboard");
+  revalidatePath("/charts");
+  return count;
 }
 
 const settingsSchema = z.object({

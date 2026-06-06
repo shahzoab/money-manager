@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { TransactionType, RecurringFrequency } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -12,19 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { PickerField } from "@/components/ui/picker-field";
 import {
   createRecurringPayment,
   deleteRecurringPayment,
   processDueRecurringPayments,
+  updateRecurringPayment,
 } from "@/actions/recurring";
 import { formatMoney } from "@/lib/currency-format";
 import { filterFieldClass } from "@/lib/form-field-styles";
@@ -53,6 +53,40 @@ type Payment = {
   account: { name: string; currency: string } | null;
 };
 
+type RecurringForm = {
+  type: TransactionType;
+  amount: string;
+  frequency: RecurringFrequency;
+  nextDueDate: string;
+  comment: string;
+};
+
+function toDateTimeLocalValue(date: Date | string) {
+  const value = new Date(date);
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function emptyForm(): RecurringForm {
+  return {
+    type: TransactionType.EXPENSE,
+    amount: "",
+    frequency: RecurringFrequency.MONTHLY,
+    nextDueDate: toDateTimeLocalValue(new Date()),
+    comment: "",
+  };
+}
+
+function paymentToForm(payment: Payment): RecurringForm {
+  return {
+    type: payment.type,
+    amount: String(payment.amount),
+    frequency: payment.frequency,
+    nextDueDate: toDateTimeLocalValue(payment.nextDueDate),
+    comment: payment.comment ?? "",
+  };
+}
+
 export function RecurringManager({
   payments,
   upcoming,
@@ -62,36 +96,60 @@ export function RecurringManager({
   upcoming: Payment[];
   defaultTab: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
+  const [form, setForm] = useState<RecurringForm>(() => emptyForm());
 
-  const [form, setForm] = useState({
-    type: TransactionType.EXPENSE as TransactionType,
-    amount: "",
-    frequency: RecurringFrequency.MONTHLY as RecurringFrequency,
-    nextDueDate: new Date().toISOString().split("T")[0],
-    autoCreate: false,
-    comment: "",
-  });
+  function openCreateDialog() {
+    setEditingPayment(null);
+    setForm(emptyForm());
+    setOpen(true);
+  }
 
-  function handleCreate(e: React.FormEvent) {
+  function openEditDialog(payment: Payment) {
+    setEditingPayment(payment);
+    setForm(paymentToForm(payment));
+    setOpen(true);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setEditingPayment(null);
+      setForm(emptyForm());
+    }
+  }
+
+  function handleSave(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
       try {
-        await createRecurringPayment({
+        const input = {
           type: form.type,
           amount: parseFloat(form.amount),
           frequency: form.frequency,
           nextDueDate: new Date(form.nextDueDate),
-          autoCreate: form.autoCreate,
+          autoCreate: true,
           comment: form.comment || undefined,
-        });
-        toast.success("Recurring payment created");
+        };
+
+        if (editingPayment) {
+          await updateRecurringPayment(editingPayment.id, input);
+          toast.success("Recurring payment updated");
+        } else {
+          await createRecurringPayment(input);
+          toast.success("Recurring payment created");
+        }
+
         setOpen(false);
-        window.location.reload();
+        setEditingPayment(null);
+        setForm(emptyForm());
+        router.refresh();
       } catch {
-        toast.error("Failed to create");
+        toast.error(editingPayment ? "Failed to update" : "Failed to create");
       }
     });
   }
@@ -104,10 +162,10 @@ export function RecurringManager({
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground lg:left-3 lg:h-4 lg:w-4" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground lg:left-3 lg:h-4 lg:w-4" />
           <Input
             placeholder="Search recurring..."
-            className={cn("pl-12 lg:pl-9", filterFieldClass)}
+            className={cn(filterFieldClass, "pl-14 lg:pl-10")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -124,18 +182,18 @@ export function RecurringManager({
           >
             Process Due
           </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Recurring
-              </Button>
-            </DialogTrigger>
+          <Button className="gap-2" onClick={openCreateDialog}>
+            <Plus className="h-4 w-4" />
+            Add Recurring
+          </Button>
+          <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>New Recurring Payment</DialogTitle>
+                <DialogTitle>
+                  {editingPayment ? "Edit Recurring Payment" : "New Recurring Payment"}
+                </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <PickerField
@@ -167,11 +225,12 @@ export function RecurringManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Next Due Date</Label>
+                  <Label>Next Due</Label>
                   <Input
-                    type="date"
+                    type="datetime-local"
                     value={form.nextDueDate}
                     onChange={(e) => setForm({ ...form, nextDueDate: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -182,15 +241,8 @@ export function RecurringManager({
                     onSearch={getCommentSuggestions}
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <Label>Auto-create transaction</Label>
-                  <Switch
-                    checked={form.autoCreate}
-                    onCheckedChange={(v) => setForm({ ...form, autoCreate: v })}
-                  />
-                </div>
                 <Button type="submit" className="w-full" disabled={pending}>
-                  Create
+                  {editingPayment ? "Save Changes" : "Create"}
                 </Button>
               </form>
             </DialogContent>
@@ -206,7 +258,12 @@ export function RecurringManager({
 
         <TabsContent value="all" className="mt-4 space-y-3">
           {filtered.map((p) => (
-            <PaymentCard key={p.id} payment={p} onDelete={deleteRecurringPayment} />
+            <PaymentCard
+              key={p.id}
+              payment={p}
+              onDelete={deleteRecurringPayment}
+              onEdit={openEditDialog}
+            />
           ))}
           {filtered.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">No recurring payments</p>
@@ -215,7 +272,13 @@ export function RecurringManager({
 
         <TabsContent value="upcoming" className="mt-4 space-y-3">
           {upcoming.map((p) => (
-            <PaymentCard key={p.id} payment={p} onDelete={deleteRecurringPayment} upcoming />
+            <PaymentCard
+              key={p.id}
+              payment={p}
+              onDelete={deleteRecurringPayment}
+              onEdit={openEditDialog}
+              upcoming
+            />
           ))}
           {upcoming.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">Nothing upcoming</p>
@@ -229,10 +292,12 @@ export function RecurringManager({
 function PaymentCard({
   payment,
   onDelete,
+  onEdit,
   upcoming,
 }: {
   payment: Payment;
   onDelete: (id: string) => Promise<void>;
+  onEdit: (payment: Payment) => void;
   upcoming?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -242,55 +307,63 @@ function PaymentCard({
 
   return (
     <>
-    <Card className="border-border/60 bg-surface">
-      <CardContent className="flex items-center justify-between p-4">
-        <div>
-          <p className="font-medium">{payment.comment || "Recurring payment"}</p>
-          <p className="text-xs text-muted-foreground">
-            {payment.frequency} · {payment.type}
-            {payment.category && ` · ${payment.category.name}`}
-          </p>
-          <p className="mt-1 text-xs text-accent">
-            Next: {format(new Date(payment.nextDueDate), "MMM d, yyyy")}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="font-semibold tabular-nums">
-            {formatMoney(Number(payment.amount), currency)}
-          </p>
-          {payment.autoCreate && (
-            <span className="text-xs text-muted-foreground">Auto-create</span>
-          )}
-          {upcoming && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 text-red-400"
-              onClick={() => setConfirmOpen(true)}
-            >
-              Remove
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <Card className="border-border/60 bg-surface">
+        <CardContent className="flex items-center justify-between gap-4 p-4">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{payment.comment || "Recurring payment"}</p>
+            <p className="text-xs text-muted-foreground">
+              {payment.frequency} · {payment.type}
+              {payment.category && ` · ${payment.category.name}`}
+              {upcoming && " · Upcoming"}
+            </p>
+            <p className="mt-1 text-xs text-accent">
+              Next: {format(new Date(payment.nextDueDate), "MMM d, yyyy h:mm a")}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2 text-right">
+            <p className="font-semibold tabular-nums">
+              {formatMoney(Number(payment.amount), currency)}
+            </p>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1"
+                onClick={() => onEdit(payment)}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-red-400"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-    <ConfirmDialog
-      open={confirmOpen}
-      onOpenChange={setConfirmOpen}
-      title="Remove Recurring Payment"
-      description={`Remove "${label}"? This recurring payment will be deactivated.`}
-      confirmLabel="Remove"
-      loading={deleting}
-      onConfirm={() => {
-        startDeleteTransition(async () => {
-          await onDelete(payment.id);
-          setConfirmOpen(false);
-          toast.success("Removed");
-          window.location.reload();
-        });
-      }}
-    />
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Remove Recurring Payment"
+        description={`Remove "${label}"? This recurring payment will be deactivated.`}
+        confirmLabel="Remove"
+        loading={deleting}
+        onConfirm={() => {
+          startDeleteTransition(async () => {
+            await onDelete(payment.id);
+            setConfirmOpen(false);
+            toast.success("Removed");
+            window.location.reload();
+          });
+        }}
+      />
     </>
   );
 }

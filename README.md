@@ -55,7 +55,15 @@ Edit `.env` and set at minimum:
 - `BETTER_AUTH_SECRET` (32+ random characters)
 - `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000`)
 
-Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPLOADTHING_TOKEN`, VAPID keys for push.
+Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPLOADTHING_TOKEN`, VAPID keys for push, and `CRON_SECRET` for automatic recurring processing.
+
+To generate VAPID keys for Web Push:
+
+```bash
+npm run vapid:generate
+```
+
+Copy the generated public key into both `VAPID_PUBLIC_KEY` and `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, and copy the private key into `VAPID_PRIVATE_KEY`.
 
 ### 4. Apply schema
 
@@ -73,15 +81,36 @@ Open [http://localhost:3000](http://localhost:3000), register, and start trackin
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server (webpack) |
-| `npm run build` | Apply migrations + production build |
-| `npm run db:dev` | Start local Postgres via Prisma Dev |
-| `npm run db:push` | Push schema to database (prototyping) |
-| `npm run db:migrate` | Create/run migrations (local dev) |
-| `npm run db:deploy` | Apply pending migrations (production/CI) |
-| `npm run db:studio` | Open Prisma Studio |
+| Command                  | Description                              |
+| ------------------------ | ---------------------------------------- |
+| `npm run dev`            | Start dev server (webpack)               |
+| `npm run build`          | Apply migrations + production build      |
+| `npm run db:dev`         | Start local Postgres via Prisma Dev      |
+| `npm run db:push`        | Push schema to database (prototyping)    |
+| `npm run db:migrate`     | Create/run migrations (local dev)        |
+| `npm run db:deploy`      | Apply pending migrations (production/CI) |
+| `npm run db:studio`      | Open Prisma Studio                       |
+| `npm run vapid:generate` | Generate Web Push VAPID keys             |
+
+## Automatic recurring processing
+
+Recurring payments process through a protected route:
+
+Use [cron-job.org](https://cron-job.org/) as the free external scheduler:
+
+- URL: `https://YOUR_VERCEL_DOMAIN/api/recurring/process-due`
+- Method: `GET`
+- Schedule: every 1 minute
+- Header name: `Authorization`
+- Header value: `Bearer YOUR_CRON_SECRET`
+- Expected response: `{"processed": number}`
+
+Set the same `CRON_SECRET` in your Vercel project environment and in cron-job.org's request header. External schedulers cannot call `localhost`; for local development, run the curl command above with `NEXT_PUBLIC_APP_URL=http://localhost:3001` or call the local URL directly:
+
+```bash
+curl "http://localhost:3001/api/recurring/process-due" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
 
 ## Deploy
 

@@ -1,18 +1,7 @@
 import { NextResponse } from "next/server";
-import webpush from "web-push";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
-
-const vapidPublic = process.env.VAPID_PUBLIC_KEY;
-const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
-
-if (vapidPublic && vapidPrivate) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? "mailto:support@example.com",
-    vapidPublic,
-    vapidPrivate,
-  );
-}
+import { isPushConfigured, sendPushNotificationToUser } from "@/lib/push";
 
 export async function POST(request: Request) {
   const session = await requireSession();
@@ -47,15 +36,11 @@ export async function DELETE(request: Request) {
 }
 
 export async function PUT() {
-  if (!vapidPublic || !vapidPrivate) {
+  if (!isPushConfigured()) {
     return NextResponse.json({ error: "Push not configured" }, { status: 503 });
   }
 
   const session = await requireSession();
-  const subscriptions = await db.pushSubscription.findMany({
-    where: { userId: session.user.id },
-  });
-
   const upcoming = await db.recurringPayment.findMany({
     where: {
       userId: session.user.id,
@@ -65,20 +50,12 @@ export async function PUT() {
     take: 5,
   });
 
-  for (const sub of subscriptions) {
-    for (const payment of upcoming) {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-        JSON.stringify({
-          title: "Payment Reminder",
-          body: `${payment.comment ?? "Recurring payment"} — ${Number(payment.amount).toFixed(2)}`,
-          url: `/recurring?id=${payment.id}`,
-        }),
-      ).catch(() => {});
-    }
+  for (const payment of upcoming) {
+    await sendPushNotificationToUser(session.user.id, {
+      title: "Payment Reminder",
+      body: `${payment.comment ?? "Recurring payment"} - ${Number(payment.amount).toFixed(2)}`,
+      url: `/recurring?id=${payment.id}`,
+    });
   }
 
   return NextResponse.json({ sent: upcoming.length });

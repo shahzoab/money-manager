@@ -26,7 +26,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? "Money Manager", {
       body: data.body ?? "",
-      icon: "/icons/icon-192.png",
+      icon: "/icons/icon.svg",
       data: { url: data.url ?? "/dashboard" },
     }),
   );

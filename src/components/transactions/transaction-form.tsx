@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { TransactionType } from "@/generated/prisma/enums";
@@ -13,6 +13,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCommentSuggestions, previewTransferConversion } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { getCategories } from "@/actions/categories";
+import {
+  getCachedAccounts,
+  getCachedCategories,
+  getCachedCommentSuggestions,
+} from "@/lib/offline-data";
 import { AmountCalculator } from "@/components/transactions/amount-calculator";
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { transactionTypeStyles } from "@/lib/transaction-type-styles";
@@ -117,16 +122,34 @@ export function TransactionForm({
   const [toAccountId, setToAccountId] = useState(
     initialValues?.toAccountId ?? emptyValues.toAccountId,
   );
-  const [accounts, setAccounts] = useState<Awaited<ReturnType<typeof getAccounts>>>([]);
-  const [categories, setCategories] = useState<Awaited<ReturnType<typeof getCategories>>>([]);
+  type FormAccount = Awaited<ReturnType<typeof getAccounts>>[number];
+  type FormCategory = Awaited<ReturnType<typeof getCategories>>[number];
+  const [accounts, setAccounts] = useState<FormAccount[]>([]);
+  const [categories, setCategories] = useState<FormCategory[]>([]);
   const [photoUrl, setPhotoUrl] = useState(initialValues?.photoUrl ?? emptyValues.photoUrl);
 
   const typeStyles = transactionTypeStyles(type);
 
   useEffect(() => {
-    Promise.all([getAccounts(), getCategories()]).then(([accs, cats]) => {
-      setAccounts(accs);
-      setCategories(cats);
+    async function loadFormData() {
+      let accs = await getCachedAccounts();
+      let cats = await getCachedCategories();
+
+      if (navigator.onLine) {
+        try {
+          const [serverAccs, serverCats] = await Promise.all([
+            getAccounts(),
+            getCategories(),
+          ]);
+          accs = serverAccs;
+          cats = serverCats;
+        } catch {
+          // Keep cached fallback when server actions fail.
+        }
+      }
+
+      setAccounts(accs as FormAccount[]);
+      setCategories(cats as FormCategory[]);
       if (mode === "create") {
         const defaultAcc = accs.find((a) => a.isDefault) ?? accs[0];
         if (defaultAcc) {
@@ -134,8 +157,21 @@ export function TransactionForm({
           setToAccountId((prev) => prev || defaultAcc.id);
         }
       }
-    });
+    }
+
+    void loadFormData();
   }, [mode]);
+
+  const searchComments = useCallback(async (query: string) => {
+    if (navigator.onLine) {
+      try {
+        return await getCommentSuggestions(query);
+      } catch {
+        return getCachedCommentSuggestions(query);
+      }
+    }
+    return getCachedCommentSuggestions(query);
+  }, []);
 
   useEffect(() => {
     if (autoFocusAmount) {
@@ -491,7 +527,7 @@ export function TransactionForm({
               id="comment"
               value={comment}
               onChange={setComment}
-              onSearch={getCommentSuggestions}
+              onSearch={searchComments}
               placeholder="What was this for?"
             />
           </div>

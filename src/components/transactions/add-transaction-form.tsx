@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { createTransaction } from "@/actions/transactions";
 import { TransactionForm } from "@/components/transactions/transaction-form";
+import { queuePendingTransaction } from "@/lib/offline-data";
 import { toast } from "sonner";
 
 function parseTypeParam(value: string | null): TransactionType {
@@ -34,6 +35,18 @@ function AddTransactionFormInner() {
       initialValues={{ type: defaultType }}
       onSubmit={(data) => {
         startTransition(async () => {
+          if (!navigator.onLine) {
+            try {
+              await queuePendingTransaction(data);
+              toast.success("Saved offline — will sync when connected");
+              router.push("/transactions");
+              router.refresh();
+            } catch {
+              toast.error("Failed to save transaction offline");
+            }
+            return;
+          }
+
           try {
             const result = await createTransaction(data);
             toast.success("Transaction added");

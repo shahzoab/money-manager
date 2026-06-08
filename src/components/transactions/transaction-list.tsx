@@ -15,7 +15,7 @@ import { EntityBadge } from "@/components/ui/entity-badge";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
 
-type TransactionRow = {
+export type TransactionRow = {
   id: string;
   type: TransactionType;
   amount: unknown;
@@ -23,6 +23,7 @@ type TransactionRow = {
   date: Date;
   comment: string | null;
   isReconciliation?: boolean;
+  isPending?: boolean;
   category: { name: string; color: string; icon: string } | null;
   fromAccount: { name: string; currency: string } | null;
   toAccount: { name: string; currency: string } | null;
@@ -70,8 +71,20 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
             {transactions.map((tx, i) => (
               <tr
                 key={tx.id}
-                className={`cursor-pointer border-b border-border/50 transition-colors hover:bg-surface-elevated/50 active:bg-surface-elevated ${i % 2 === 0 ? "bg-surface" : "bg-surface/50"}`}
-                onClick={() => router.push(`/transactions/${tx.id}`)}
+                className={cn(
+                  "border-b border-border/50 transition-colors",
+                  tx.isPending
+                    ? "cursor-default opacity-90"
+                    : "cursor-pointer hover:bg-surface-elevated/50 active:bg-surface-elevated",
+                  i % 2 === 0 ? "bg-surface" : "bg-surface/50",
+                )}
+                onClick={() => {
+                  if (tx.isPending) {
+                    toast.message("Waiting to sync");
+                    return;
+                  }
+                  router.push(`/transactions/${tx.id}`);
+                }}
               >
                 <td className="whitespace-nowrap px-3 py-4 tabular-nums text-muted-foreground sm:px-4 lg:py-3">
                   {format(new Date(tx.date), showYear ? "MMM d, yyyy" : "MMM d")}
@@ -79,6 +92,11 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                 <td className="max-w-[120px] truncate px-3 py-4 sm:max-w-none sm:px-4 lg:py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="truncate font-medium">{tx.comment || "—"}</div>
+                    {tx.isPending && (
+                      <span className="shrink-0 rounded bg-yellow-500/15 px-1.5 py-0.5 text-xs text-yellow-600 dark:text-yellow-400">
+                        Pending sync
+                      </span>
+                    )}
                     {tx.isReconciliation && (
                       <span className="shrink-0 rounded bg-muted/30 px-1.5 py-0.5 text-xs text-muted-foreground">
                         Reconciliation
@@ -145,32 +163,34 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                   )}
                 </td>
                 <td className="hidden px-4 py-4 sm:table-cell lg:py-3">
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/transactions/${tx.id}/edit`);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-400"
-                      aria-label="Delete transaction"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDelete(tx.id);
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {!tx.isPending && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/transactions/${tx.id}/edit`);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-400"
+                        aria-label="Delete transaction"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDelete(tx.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

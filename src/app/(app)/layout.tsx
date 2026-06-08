@@ -5,6 +5,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AppLockProvider } from "@/components/security/app-lock";
 import { getSettings } from "@/actions/recurring";
 import { getDashboardData } from "@/actions/dashboard";
+import { getCategories } from "@/actions/categories";
+import { getCommentSuggestions } from "@/actions/transactions";
+import { OfflineQueueSync } from "@/components/offline/offline-queue-sync";
 import { OfflineSync } from "@/components/offline/offline-sync";
 import { getAccountBalance } from "@/lib/balance";
 
@@ -20,7 +23,11 @@ export default async function AppLayout({
 
   await initializeUserData();
   const settings = await getSettings();
-  const dashData = await getDashboardData();
+  const [dashData, categories, comments] = await Promise.all([
+    getDashboardData(),
+    getCategories(),
+    getCommentSuggestions(),
+  ]);
 
   const accountsWithBalance = await Promise.all(
     dashData.accounts.map(async (a) => ({
@@ -30,6 +37,9 @@ export default async function AppLayout({
       color: a.color,
       icon: a.icon,
       balance: await getAccountBalance(a.id),
+      isDefault: a.isDefault,
+      sortOrder: a.sortOrder,
+      isHidden: a.isHidden,
     })),
   );
 
@@ -41,6 +51,15 @@ export default async function AppLayout({
       <OfflineSync
         userId={session.user.id}
         accounts={accountsWithBalance}
+        categories={categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          icon: c.icon,
+          color: c.color,
+          sortOrder: c.sortOrder,
+        }))}
+        comments={comments}
         transactions={dashData.transactions.map((t) => ({
           id: t.id,
           type: t.type,
@@ -52,6 +71,7 @@ export default async function AppLayout({
           toAccountId: t.toAccountId,
         }))}
       />
+      <OfflineQueueSync />
       <AppShell totalBalance={dashData.totalBalance}>
         {children}
       </AppShell>

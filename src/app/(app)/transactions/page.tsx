@@ -3,7 +3,7 @@ import { getCategories } from "@/actions/categories";
 import { getSettings } from "@/actions/recurring";
 import { getTransactions } from "@/actions/transactions";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
-import { TransactionList } from "@/components/transactions/transaction-list";
+import { TransactionListWithOffline } from "@/components/transactions/transaction-list-with-offline";
 import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionSummaryCards } from "@/components/transactions/transaction-summary-cards";
@@ -73,7 +73,7 @@ export default async function TransactionsPage({
           <CardTitle>All Transactions</CardTitle>
         </CardHeader>
         <CardContent className="p-0 pb-2">
-          <TransactionList
+          <TransactionListWithOffline
             key={`${period}-${params.from ?? ""}-${params.to ?? ""}-${params.account ?? "all"}-${params.type ?? "all"}-${params.category ?? "all"}-${params.search ?? ""}-${params.sort ?? "date"}`}
             transactions={transactions}
             currency={baseCurrency}

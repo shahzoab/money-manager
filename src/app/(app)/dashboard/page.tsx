@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getDashboardData } from "@/actions/dashboard";
+import { getSettings } from "@/actions/recurring";
 import { TransactionSummaryCards } from "@/components/transactions/transaction-summary-cards";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Button } from "@/components/ui/button";
@@ -8,25 +9,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { AccountFilter } from "@/components/dashboard/account-filter";
+import { parsePeriodParams } from "@/lib/periods";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; account?: string }>;
+  searchParams: Promise<{ period?: string; from?: string; to?: string; account?: string }>;
 }) {
   const params = await searchParams;
+  const settings = await getSettings();
+  const { period, from, to } = parsePeriodParams(params, settings);
   const data = await getDashboardData({
-    period: params.period as "day" | "week" | "month" | "year" | undefined,
+    period,
     accountId: params.account,
+    customFrom: from,
+    customTo: to,
   });
 
   const transactionsQuery = new URLSearchParams();
-  if (data.period) transactionsQuery.set("period", data.period);
+  transactionsQuery.set("period", data.period);
   if (params.account) transactionsQuery.set("account", params.account);
-  const transactionsHref =
-    transactionsQuery.size > 0
-      ? `/transactions?${transactionsQuery.toString()}`
-      : "/transactions";
+  if (params.from) transactionsQuery.set("from", params.from);
+  if (params.to) transactionsQuery.set("to", params.to);
+  const transactionsHref = `/transactions?${transactionsQuery.toString()}`;
 
   return (
     <div className="min-w-0 max-w-full space-y-6">

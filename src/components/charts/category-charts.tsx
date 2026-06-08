@@ -1,22 +1,51 @@
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
 import { EntityBadge } from "@/components/ui/entity-badge";
+import { formatAmount } from "@/lib/currency-format";
 
-type CategoryBarChartProps = {
-  data: { name: string; color: string; amount: number }[];
+type CategoryBarItem = {
+  name: string;
+  color: string;
+  icon?: string;
+  amount: number;
 };
 
-export function CategoryBarChart({ data }: CategoryBarChartProps) {
+type CategoryBarChartProps = {
+  data: CategoryBarItem[];
+  currency?: string;
+};
+
+function CategoryBarList({ data }: CategoryBarChartProps) {
+  const maxAmount = Math.max(...data.map((d) => d.amount), 1);
+
+  return (
+    <div className="space-y-3">
+      {data.map((item) => {
+        const pct = Math.max(4, (item.amount / maxAmount) * 100);
+        return (
+          <div key={item.name} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <EntityBadge icon={item.icon ?? "tag"} color={item.color} size="sm">
+                {item.name}
+              </EntityBadge>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {formatAmount(item.amount)}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-surface-elevated">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pct}%`, background: item.color }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function CategoryBarChart({ data, currency }: CategoryBarChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
@@ -25,33 +54,7 @@ export function CategoryBarChart({ data }: CategoryBarChartProps) {
     );
   }
 
-  return (
-    <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={data} layout="vertical" margin={{ left: 80, right: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-        <XAxis type="number" tick={{ fill: "#a1a1aa", fontSize: 11 }} />
-        <YAxis
-          type="category"
-          dataKey="name"
-          tick={{ fill: "#a1a1aa", fontSize: 11 }}
-          width={75}
-        />
-        <Tooltip
-          contentStyle={{
-            background: "#141416",
-            border: "1px solid #27272a",
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-        />
-        <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-          {data.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  );
+  return <CategoryBarList data={data} currency={currency} />;
 }
 
 type BudgetProgressProps = {

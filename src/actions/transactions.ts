@@ -194,6 +194,7 @@ export async function recalculateStaleBaseCurrencyAmounts(userId: string, baseCu
 export async function getTransactions(filters?: {
   search?: string;
   accountId?: string;
+  categoryId?: string;
   type?: TransactionType;
   from?: Date;
   to?: Date;
@@ -222,16 +223,14 @@ export async function getTransactions(filters?: {
 
   if (filters?.search) {
     andConditions.push({
-      OR: [
-        { comment: { contains: filters.search, mode: "insensitive" } },
-        { category: { name: { contains: filters.search, mode: "insensitive" } } },
-      ],
+      comment: { contains: filters.search, mode: "insensitive" },
     });
   }
 
   const where: Prisma.TransactionWhereInput = {
     userId: session.user.id,
     ...(filters?.type && { type: filters.type }),
+    ...(filters?.categoryId && { categoryId: filters.categoryId }),
     ...(filters?.from || filters?.to
       ? {
           date: {

@@ -118,8 +118,8 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
       result.notified += 1;
       result.processed += 1;
       const pushResult = await sendPushNotificationToUser(payment.userId, {
-        title: "Recurring payment due",
-        body: `${payment.comment ?? "Recurring payment"} - ${amount.toFixed(2)}`,
+        title: payment.comment?.trim() || "Recurring payment due",
+        body: amount.toFixed(2),
         url: "/recurring",
       });
 
@@ -179,8 +179,8 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     result.created += 1;
     result.processed += 1;
     const pushResult = await sendPushNotificationToUser(payment.userId, {
-      title: "Recurring payment processed",
-      body: `${payment.comment ?? "Recurring payment"} - ${amount.toFixed(2)}`,
+      title: payment.comment?.trim() || "Recurring payment processed",
+      body: amount.toFixed(2),
       url: `/transactions/${transaction.id}`,
     });
 

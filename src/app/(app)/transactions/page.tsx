@@ -1,4 +1,5 @@
 import { getAccounts } from "@/actions/accounts";
+import { getCategories } from "@/actions/categories";
 import { getSettings } from "@/actions/recurring";
 import { getTransactions } from "@/actions/transactions";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
@@ -6,7 +7,7 @@ import { TransactionList } from "@/components/transactions/transaction-list";
 import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionSummaryCards } from "@/components/transactions/transaction-summary-cards";
-import { getPeriodRange, type Period } from "@/lib/periods";
+import { parsePeriodParams } from "@/lib/periods";
 import { parseTransactionTypeParam } from "@/lib/transaction-filters";
 
 export default async function TransactionsPage({
@@ -17,21 +18,24 @@ export default async function TransactionsPage({
     sort?: string;
     type?: string;
     account?: string;
+    category?: string;
     period?: string;
+    from?: string;
+    to?: string;
   }>;
 }) {
   const params = await searchParams;
   const settings = await getSettings();
-  const period = (params.period ?? settings?.homePeriod ?? "month") as Period;
-  const weekStartsOn = (settings?.firstDayOfWeek ?? 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  const { from, to } = getPeriodRange(period, undefined, undefined, weekStartsOn);
+  const { period, from, to } = parsePeriodParams(params, settings);
   const type = parseTransactionTypeParam(params.type);
 
-  const [accounts, { transactions, total, baseCurrency, summary }] = await Promise.all([
+  const [accounts, categories, { transactions, total, baseCurrency, summary }] = await Promise.all([
     getAccounts(),
+    getCategories(),
     getTransactions({
       search: params.search,
       accountId: params.account,
+      categoryId: params.category,
       type,
       from,
       to,
@@ -51,7 +55,11 @@ export default async function TransactionsPage({
         </p>
       </div>
 
-      <TransactionFilters accounts={visibleAccounts} period={period} />
+      <TransactionFilters
+        accounts={visibleAccounts}
+        categories={categories}
+        period={period}
+      />
 
       <TransactionSummaryCards
         income={summary.income}
@@ -66,10 +74,10 @@ export default async function TransactionsPage({
         </CardHeader>
         <CardContent className="p-0 pb-2">
           <TransactionList
-            key={`${period}-${params.account ?? "all"}-${params.type ?? "all"}-${params.search ?? ""}-${params.sort ?? "date"}`}
+            key={`${period}-${params.from ?? ""}-${params.to ?? ""}-${params.account ?? "all"}-${params.type ?? "all"}-${params.category ?? "all"}-${params.search ?? ""}-${params.sort ?? "date"}`}
             transactions={transactions}
             currency={baseCurrency}
-            showYear={period === "year"}
+            showYear={period === "year" || period === "prev_year" || period === "all"}
           />
         </CardContent>
       </Card>

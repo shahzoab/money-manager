@@ -15,6 +15,15 @@ type TrendChartProps = {
   currency: string;
 };
 
+function formatMonthLabel(monthKey: string, style: "short" | "long" = "short") {
+  const [year, month] = monthKey.split("-").map(Number);
+  if (!year || !month) return monthKey;
+  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+    month: style === "long" ? "long" : "short",
+    year: "numeric",
+  });
+}
+
 export function TrendChart({ data }: TrendChartProps) {
   if (data.length === 0) {
     return (
@@ -41,10 +50,11 @@ export function TrendChart({ data }: TrendChartProps) {
         <XAxis
           dataKey="date"
           tick={{ fill: "#a1a1aa", fontSize: 11 }}
-          tickFormatter={(v) => v.slice(5)}
+          tickFormatter={(v) => formatMonthLabel(v)}
         />
         <YAxis tick={{ fill: "#a1a1aa", fontSize: 11 }} />
         <Tooltip
+          labelFormatter={(label) => formatMonthLabel(String(label), "long")}
           contentStyle={{
             background: "#141416",
             border: "1px solid #27272a",

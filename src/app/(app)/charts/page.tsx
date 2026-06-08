@@ -1,33 +1,67 @@
+import { Suspense } from "react";
+import { getAccounts } from "@/actions/accounts";
 import { getChartData } from "@/actions/dashboard";
+import { getSettings } from "@/actions/recurring";
 import {
   CategoryBarChart,
   BudgetProgress
 } from "@/components/charts/category-charts";
+import { ChartsFilters } from "@/components/charts/charts-filters";
 import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { formatAmount } from "@/lib/currency-format";
+import { parsePeriodParams } from "@/lib/periods";
 
 export default async function ChartsPage({
   searchParams
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; from?: string; to?: string; account?: string }>;
 }) {
   const params = await searchParams;
-  const period = (params.period ?? "month") as
-    | "day"
-    | "week"
-    | "month"
-    | "year";
-  const chartData = await getChartData({ period });
+  const settings = await getSettings();
+  const { period, from, to } = parsePeriodParams(params, settings);
+
+  const [accounts, chartData] = await Promise.all([
+    getAccounts(),
+    getChartData({
+      period,
+      accountId: params.account,
+      customFrom: from,
+      customTo: to,
+    }),
+  ]);
+
+  const filterAccounts = accounts
+    .filter((a) => !a.isHidden)
+    .map(({ id, name, currency, color, icon }) => ({ id, name, currency, color, icon }));
+  const categoryBarData = chartData.categoryChart.map((c) => ({
+    name: c.name,
+    color: c.color,
+    icon: c.icon,
+    amount: c.amount,
+  }));
 
   return (
     <div className="min-w-0 max-w-full space-y-6">
-      <div>
-        <h1 className={pageTitleClass}>Charts & Reports</h1>
-        <p className={pageSubtitleClass}>
-          Analyze your spending patterns
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className={pageTitleClass}>Charts & Reports</h1>
+          <p className={pageSubtitleClass}>
+            Analyze your spending patterns
+          </p>
+        </div>
+        <Suspense
+          fallback={
+            <div className="h-14 w-full max-w-md animate-pulse rounded-xl bg-surface-elevated sm:w-[360px]" />
+          }
+        >
+          <ChartsFilters
+            accounts={filterAccounts}
+            period={period}
+            selectedAccount={params.account}
+          />
+        </Suspense>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -62,11 +96,11 @@ export default async function ChartsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/60 bg-surface">
           <CardHeader>
-            <CardTitle>Cash Flow Trend</CardTitle>
+            <CardTitle>Spending by Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <TrendChart
-              data={chartData.trendData}
+            <CategoryBarChart
+              data={categoryBarData}
               currency={chartData.baseCurrency}
             />
           </CardContent>
@@ -74,15 +108,12 @@ export default async function ChartsPage({
 
         <Card className="border-border/60 bg-surface">
           <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
+            <CardTitle>Cash Flow Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <CategoryBarChart
-              data={chartData.categoryChart.map(c => ({
-                name: c.name,
-                color: c.color,
-                amount: c.amount
-              }))}
+            <TrendChart
+              data={chartData.trendData}
+              currency={chartData.baseCurrency}
             />
           </CardContent>
         </Card>

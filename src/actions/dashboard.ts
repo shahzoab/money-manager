@@ -3,7 +3,7 @@
 import { requireSession } from "@/lib/auth-server";
 import { activeWalletAccountWhere } from "@/lib/accounts";
 import { db } from "@/lib/db";
-import { getPeriodRange, type Period } from "@/lib/periods";
+import { buildDateFilter, getPeriodRange, type Period } from "@/lib/periods";
 import { getTotalBalanceInCurrency } from "@/lib/balance";
 import { serializeAccount, serializeTransaction } from "@/lib/serialize";
 import { buildTransactionSummary } from "@/lib/transaction-summary";
@@ -13,6 +13,8 @@ import { TransactionType } from "@/generated/prisma/client";
 export async function getDashboardData(options?: {
   period?: Period;
   accountId?: string;
+  customFrom?: Date;
+  customTo?: Date;
 }) {
   const session = await requireSession();
   const userId = session.user.id;
@@ -22,7 +24,12 @@ export async function getDashboardData(options?: {
   const period = (options?.period ?? settings?.homePeriod ?? "month") as Period;
   const weekStartsOn = (settings?.firstDayOfWeek ?? 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-  const { from, to } = getPeriodRange(period, undefined, undefined, weekStartsOn);
+  const { from, to } = getPeriodRange(
+    period,
+    options?.customFrom,
+    options?.customTo,
+    weekStartsOn,
+  );
 
   const accountFilter = options?.accountId
     ? {
@@ -35,7 +42,7 @@ export async function getDashboardData(options?: {
 
   const where = {
     userId,
-    date: { gte: from, lte: to },
+    ...buildDateFilter(from, to),
     ...accountFilter,
   };
 
@@ -84,13 +91,20 @@ export async function getDashboardData(options?: {
 export async function getChartData(options?: {
   period?: Period;
   accountId?: string;
+  customFrom?: Date;
+  customTo?: Date;
 }) {
   const session = await requireSession();
   const userId = session.user.id;
   const settings = await db.userSettings.findUnique({ where: { userId } });
   const period = (options?.period ?? "month") as Period;
   const weekStartsOn = (settings?.firstDayOfWeek ?? 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  const { from, to } = getPeriodRange(period, undefined, undefined, weekStartsOn);
+  const { from, to } = getPeriodRange(
+    period,
+    options?.customFrom,
+    options?.customTo,
+    weekStartsOn,
+  );
 
   const accountFilter = options?.accountId
     ? {
@@ -105,7 +119,7 @@ export async function getChartData(options?: {
     db.transaction.findMany({
       where: {
         userId,
-        date: { gte: from, lte: to },
+        ...buildDateFilter(from, to),
         ...accountFilter,
         ...reportableTransactionWhere,
       },
@@ -118,31 +132,31 @@ export async function getChartData(options?: {
   ]);
 
   const byCategory: Record<string, number> = {};
-  const dailyTotals: Record<string, { income: number; expense: number }> = {};
+  const monthlyTotals: Record<string, { income: number; expense: number }> = {};
   let totalIncome = 0;
   let totalExpense = 0;
 
   for (const tx of transactions) {
     const amount = Number(tx.amountInBaseCurrency);
-    const dateKey = tx.date.toISOString().split("T")[0];
+    const monthKey = tx.date.toISOString().slice(0, 7);
 
-    if (!dailyTotals[dateKey]) {
-      dailyTotals[dateKey] = { income: 0, expense: 0 };
+    if (!monthlyTotals[monthKey]) {
+      monthlyTotals[monthKey] = { income: 0, expense: 0 };
     }
 
     if (tx.type === TransactionType.INCOME) {
       totalIncome += amount;
-      dailyTotals[dateKey].income += amount;
+      monthlyTotals[monthKey].income += amount;
     }
     if (tx.type === TransactionType.EXPENSE) {
       totalExpense += amount;
-      dailyTotals[dateKey].expense += amount;
+      monthlyTotals[monthKey].expense += amount;
       const catId = tx.categoryId ?? "uncategorized";
       byCategory[catId] = (byCategory[catId] ?? 0) + amount;
     }
   }
 
-  const trendData = Object.entries(dailyTotals)
+  const trendData = Object.entries(monthlyTotals)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, vals]) => ({
       date,

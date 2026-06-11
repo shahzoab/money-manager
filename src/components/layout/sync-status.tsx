@@ -11,9 +11,13 @@ import {
 } from "@/components/offline/offline-queue-sync";
 
 export function SyncStatusIndicator() {
-  const [status, setStatus] = useState<OfflineSyncStatus>("synced");
+  const [status, setStatus] = useState<OfflineSyncStatus>(() =>
+    typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced",
+  );
   const [pendingCount, setPendingCount] = useState(0);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
 
   const refreshPendingCount = useCallback(async () => {
     const count = await getPendingCount();
@@ -36,9 +40,9 @@ export function SyncStatusIndicator() {
       void refreshPendingCount();
     };
 
-    setIsOnline(navigator.onLine);
-    void refreshPendingCount();
-    handleConnectivity();
+    const timer = window.setTimeout(() => {
+      void refreshPendingCount();
+    }, 0);
 
     window.addEventListener(OFFLINE_SYNC_STATUS_EVENT, handleSyncStatus);
     window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refreshPendingCount);
@@ -46,6 +50,7 @@ export function SyncStatusIndicator() {
     window.addEventListener("offline", handleConnectivity);
 
     return () => {
+      window.clearTimeout(timer);
       window.removeEventListener(OFFLINE_SYNC_STATUS_EVENT, handleSyncStatus);
       window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refreshPendingCount);
       window.removeEventListener("online", handleConnectivity);

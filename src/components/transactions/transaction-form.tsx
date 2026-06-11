@@ -220,22 +220,33 @@ export function TransactionForm({
     fromAccount.currency !== toAccount.currency;
 
   useEffect(() => {
+    let resetTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleReset = (clearToAmount = false) => {
+      resetTimer = setTimeout(() => {
+        if (clearToAmount) setToAmount("");
+        setTransferRate(null);
+      }, 0);
+    };
+
     if (!isCrossCurrencyTransfer || !fromAccount || !toAccount) {
-      setTransferRate(null);
-      return;
+      scheduleReset();
+      return () => {
+        if (resetTimer) clearTimeout(resetTimer);
+      };
     }
 
     if (lastEditedAmountField !== "from") return;
 
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0) {
-      setToAmount("");
-      setTransferRate(null);
-      return;
+      scheduleReset(true);
+      return () => {
+        if (resetTimer) clearTimeout(resetTimer);
+      };
     }
 
-    setConverting(true);
     const timer = setTimeout(() => {
+      setConverting(true);
       previewTransferConversion(fromAccount.currency, toAccount.currency, numAmount)
         .then(({ converted, rate }) => {
           setToAmount(String(Math.round(converted * 100) / 100));
@@ -247,7 +258,10 @@ export function TransactionForm({
         .finally(() => setConverting(false));
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (resetTimer) clearTimeout(resetTimer);
+      clearTimeout(timer);
+    };
   }, [
     amount,
     fromAccount,
@@ -257,10 +271,19 @@ export function TransactionForm({
   ]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = (callback: () => void) => {
+      timer = setTimeout(callback, 0);
+    };
+
     if (type !== TransactionType.TRANSFER) {
-      setToAmount("");
-      setTransferRate(null);
-      return;
+      schedule(() => {
+        setToAmount("");
+        setTransferRate(null);
+      });
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }
 
     if (accounts.length === 0 || !fromAccount || !toAccount) {
@@ -268,9 +291,13 @@ export function TransactionForm({
     }
 
     if (fromAccount.currency === toAccount.currency) {
-      setToAmount("");
-      setTransferRate(null);
-      return;
+      schedule(() => {
+        setToAmount("");
+        setTransferRate(null);
+      });
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }
 
     if (skipAccountConversionReset.current) {
@@ -278,13 +305,31 @@ export function TransactionForm({
       const numAmount = parseFloat(amount);
       const numToAmount = parseFloat(toAmount);
       if (numAmount > 0 && numToAmount > 0) {
-        setTransferRate(numToAmount / numAmount);
+        schedule(() => {
+          setTransferRate(numToAmount / numAmount);
+        });
       }
-      return;
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }
 
-    setLastEditedAmountField("from");
-  }, [type, fromAccountId, toAccountId, accounts.length, fromAccount, toAccount]);
+    schedule(() => {
+      setLastEditedAmountField("from");
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    type,
+    fromAccountId,
+    toAccountId,
+    accounts.length,
+    fromAccount,
+    toAccount,
+    amount,
+    toAmount,
+  ]);
 
   function handlePhotoChange(file: File | undefined) {
     if (!file) return;

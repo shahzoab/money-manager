@@ -157,7 +157,6 @@ function parseAndroidFormat(workbook: ExcelJS.Workbook): ParsedExcelImport {
     const accountAmountCol = col(header, "amount in account currency");
     const accountCurrencyCol = col(header, "account currency");
     const txAmountCol = col(header, "transaction amount in transaction currency");
-    const txCurrencyCol = col(header, "transaction currency");
     const tagsCol = col(header, "tags");
     const commentCol = col(header, "comment");
 
@@ -240,7 +239,6 @@ function parseAndroidFormat(workbook: ExcelJS.Workbook): ParsedExcelImport {
     const incomingCol = col(header, "incoming");
     const outAmountCol = col(header, "amount in outgoing currency");
     const outCurrencyCol = col(header, "outgoing currency");
-    const inAmountCol = col(header, "amount in incoming currency");
     const inCurrencyCol = col(header, "incoming currency");
     const commentCol = col(header, "comment");
 

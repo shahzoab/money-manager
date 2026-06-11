@@ -27,10 +27,14 @@ export function TransactionListWithOffline({
   }, []);
 
   useEffect(() => {
-    void loadPending();
-    window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, loadPending);
+    const refresh = () => {
+      void loadPending();
+    };
+    const timer = window.setTimeout(refresh, 0);
+    window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refresh);
     return () => {
-      window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, loadPending);
+      window.clearTimeout(timer);
+      window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, refresh);
     };
   }, [loadPending]);
 

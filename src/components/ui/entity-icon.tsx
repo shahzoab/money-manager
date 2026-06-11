@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import { Tag, Wallet, type LucideIcon } from "lucide-react";
 import { getLucideIcon } from "@/lib/icon-map";
 import { getEntityColorStyle } from "@/lib/entity-color-styles";
@@ -40,7 +41,10 @@ export function EntityIcon({
       )}
       style={getEntityColorStyle(color, styles.border)}
     >
-      <Icon className={cn(styles.icon, "text-white")} aria-hidden />
+      {createElement(Icon, {
+        className: cn(styles.icon, "text-white"),
+        "aria-hidden": true,
+      })}
     </div>
   );
 }

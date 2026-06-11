@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,7 @@ type AppLockScreenProps = {
 export function AppLockScreen({ pinHash }: AppLockScreenProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const [unlocked, setUnlocked] = useState(true);
-
-  useEffect(() => {
-    setUnlocked(isAppLockVerified());
-  }, []);
+  const [unlocked, setUnlocked] = useState(() => isAppLockVerified());
 
   if (unlocked) return null;
 

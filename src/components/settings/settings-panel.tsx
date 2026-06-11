@@ -26,7 +26,7 @@ import { recalculateBalances } from "@/actions/accounts";
 import { hashPin } from "@/lib/app-lock";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency-format";
 import { toast } from "sonner";
-import { Download, Upload, LogOut, RefreshCw, Bell } from "lucide-react";
+import { Download, Upload, LogOut, RefreshCw, Bell, Pencil, Trash2 } from "lucide-react";
 
 const currencyOptions = SUPPORTED_CURRENCIES.map((c) => ({ value: c, label: c }));
 
@@ -101,10 +101,13 @@ export function SettingsPanel({
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [pendingTagDelete, setPendingTagDelete] = useState<Tag | null>(null);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [editingTagName, setEditingTagName] = useState("");
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [deletingTag, startDeleteTagTransition] = useTransition();
+  const [updatingTag, startUpdateTagTransition] = useTransition();
 
   function saveSettings(partial: Parameters<typeof updateSettings>[0]) {
     startTransition(async () => {
@@ -337,7 +340,7 @@ export function SettingsPanel({
                   await createTag(newTag.trim());
                   setNewTag("");
                   toast.success("Tag created");
-                  window.location.reload();
+                  router.refresh();
                 })
               }
             >
@@ -353,25 +356,21 @@ export function SettingsPanel({
               >
                 {tag.name}
                 <button
-                  className="ml-1 opacity-60 hover:opacity-100"
-                  onClick={() =>
-                    startTransition(async () => {
-                      const newName = prompt("Edit tag name", tag.name);
-                      if (newName) {
-                        await updateTag(tag.id, newName);
-                        toast.success("Tag updated");
-                        window.location.reload();
-                      }
-                    })
-                  }
+                  className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full opacity-60 hover:bg-current/10 hover:opacity-100"
+                  aria-label={`Edit ${tag.name}`}
+                  onClick={() => {
+                    setEditingTag(tag);
+                    setEditingTagName(tag.name);
+                  }}
                 >
-                  ✎
+                  <Pencil className="h-3 w-3" />
                 </button>
                 <button
-                  className="opacity-60 hover:opacity-100"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full opacity-60 hover:bg-current/10 hover:opacity-100"
+                  aria-label={`Delete ${tag.name}`}
                   onClick={() => setPendingTagDelete(tag)}
                 >
-                  ×
+                  <Trash2 className="h-3 w-3" />
                 </button>
               </span>
             ))}
@@ -541,10 +540,60 @@ export function SettingsPanel({
             await deleteTag(pendingTagDelete.id);
             setPendingTagDelete(null);
             toast.success("Tag deleted");
-            window.location.reload();
+            router.refresh();
           });
         }}
       />
+
+      <Dialog
+        open={editingTag !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTag(null);
+            setEditingTagName("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Tag</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Name</Label>
+            <Input
+              value={editingTagName}
+              onChange={(e) => setEditingTagName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingTag(null);
+                setEditingTagName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!editingTagName.trim() || updatingTag}
+              onClick={() => {
+                if (!editingTag) return;
+                startUpdateTagTransition(async () => {
+                  await updateTag(editingTag.id, editingTagName.trim());
+                  setEditingTag(null);
+                  setEditingTagName("");
+                  toast.success("Tag updated");
+                  router.refresh();
+                });
+              }}
+            >
+              {updatingTag ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={restoreOpen}

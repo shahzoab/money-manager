@@ -101,6 +101,14 @@ export function TransactionForm({
   const amountInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const skipAccountConversionReset = useRef(!!initialValues?.toAmount);
+  const initialTransferAmountsRef = useRef({
+    amount: initialValues?.amount ?? emptyValues.amount,
+    toAmount: initialValues?.toAmount ?? emptyValues.toAmount,
+  });
+  const prevTransferAccountsRef = useRef({
+    fromAccountId: initialValues?.fromAccountId ?? emptyValues.fromAccountId,
+    toAccountId: initialValues?.toAccountId ?? emptyValues.toAccountId,
+  });
   const [type, setType] = useState<TransactionType>(
     initialValues?.type ?? emptyValues.type,
   );
@@ -302,21 +310,29 @@ export function TransactionForm({
 
     if (skipAccountConversionReset.current) {
       skipAccountConversionReset.current = false;
-      const numAmount = parseFloat(amount);
-      const numToAmount = parseFloat(toAmount);
+      const numAmount = parseFloat(initialTransferAmountsRef.current.amount);
+      const numToAmount = parseFloat(initialTransferAmountsRef.current.toAmount);
       if (numAmount > 0 && numToAmount > 0) {
         schedule(() => {
           setTransferRate(numToAmount / numAmount);
         });
       }
+      prevTransferAccountsRef.current = { fromAccountId, toAccountId };
       return () => {
         if (timer) clearTimeout(timer);
       };
     }
 
-    schedule(() => {
-      setLastEditedAmountField("from");
-    });
+    const accountsChanged =
+      prevTransferAccountsRef.current.fromAccountId !== fromAccountId ||
+      prevTransferAccountsRef.current.toAccountId !== toAccountId;
+    prevTransferAccountsRef.current = { fromAccountId, toAccountId };
+
+    if (accountsChanged) {
+      schedule(() => {
+        setLastEditedAmountField("from");
+      });
+    }
     return () => {
       if (timer) clearTimeout(timer);
     };
@@ -327,8 +343,6 @@ export function TransactionForm({
     accounts.length,
     fromAccount,
     toAccount,
-    amount,
-    toAmount,
   ]);
 
   function handlePhotoChange(file: File | undefined) {
@@ -496,7 +510,15 @@ export function TransactionForm({
                     value={toAmount}
                     onChange={(e) => {
                       setLastEditedAmountField("to");
-                      setToAmount(e.target.value);
+                      const nextToAmount = e.target.value;
+                      setToAmount(nextToAmount);
+                      const numAmount = parseFloat(amount);
+                      const numToAmount = parseFloat(nextToAmount);
+                      if (numAmount > 0 && numToAmount > 0) {
+                        setTransferRate(numToAmount / numAmount);
+                      } else {
+                        setTransferRate(null);
+                      }
                     }}
                     placeholder="0.00"
                     className={cn(

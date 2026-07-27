@@ -54,7 +54,7 @@ type Payment = {
   type: TransactionType;
   amount: number;
   frequency: RecurringFrequency;
-  nextDueDate: Date;
+  nextDueDate: Date | string;
   autoCreate: boolean;
   comment: string | null;
   categoryId: string | null;

@@ -9,6 +9,7 @@ import { summarizeTransactions } from "../src/lib/dashboard-aggregation";
 import { DATABASE_OPERATION_BUDGET } from "../src/lib/operation-budget";
 import { filterUpcomingPayments } from "../src/lib/recurring-utils";
 import { isRegistrationEnabled } from "../src/lib/registration";
+import { serializeTransaction } from "../src/lib/serialize";
 
 test("computes all account balances from one shared transaction snapshot", () => {
   const balances = computeAccountBalancesFromTransactions(
@@ -63,7 +64,7 @@ test("builds dashboard totals from the shared period snapshot", () => {
 test("derives upcoming recurring payments without another database read", () => {
   const until = new Date("2026-08-01T00:00:00.000Z");
   const payments = [
-    { id: "due", nextDueDate: new Date("2026-07-31T00:00:00.000Z") },
+    { id: "due", nextDueDate: "2026-07-31T00:00:00.000Z" },
     { id: "later", nextDueDate: new Date("2026-08-02T00:00:00.000Z") },
   ];
 
@@ -71,6 +72,22 @@ test("derives upcoming recurring payments without another database read", () => 
     filterUpcomingPayments(payments, until).map((payment) => payment.id),
     ["due"],
   );
+});
+
+test("serializes transaction dates consistently for cached and uncached reads", () => {
+  const serialized = serializeTransaction({
+    amount: 25,
+    toAmount: null,
+    amountInBaseCurrency: 25,
+    exchangeRate: 1,
+    date: new Date("2026-07-28T12:00:00.000Z"),
+    createdAt: new Date("2026-07-28T12:01:00.000Z"),
+    updatedAt: "2026-07-28T12:02:00.000Z",
+  });
+
+  assert.equal(serialized.date, "2026-07-28T12:00:00.000Z");
+  assert.equal(serialized.createdAt, "2026-07-28T12:01:00.000Z");
+  assert.equal(serialized.updatedAt, "2026-07-28T12:02:00.000Z");
 });
 
 test("cache tags are isolated by user and data area", () => {

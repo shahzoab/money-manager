@@ -20,7 +20,7 @@ export type TransactionRow = {
   type: TransactionType;
   amount: unknown;
   toAmount?: number | null;
-  date: Date;
+  date: Date | string;
   comment: string | null;
   isReconciliation?: boolean;
   isPending?: boolean;

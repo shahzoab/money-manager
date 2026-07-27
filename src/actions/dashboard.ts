@@ -98,7 +98,7 @@ export async function getChartData(options?: {
   for (const tx of transactions) {
     if (tx.isReconciliation) continue;
     const amount = Number(tx.amountInBaseCurrency);
-    const monthKey = tx.date.toISOString().slice(0, 7);
+    const monthKey = tx.date.slice(0, 7);
 
     if (!monthlyTotals[monthKey]) {
       monthlyTotals[monthKey] = { income: 0, expense: 0 };

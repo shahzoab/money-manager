@@ -86,7 +86,7 @@ export default async function AppLayout({
           id: t.id,
           type: t.type,
           amount: Number(t.amount),
-          date: t.date.toISOString(),
+          date: t.date,
           comment: t.comment,
           categoryId: t.categoryId,
           fromAccountId: t.fromAccountId,

@@ -1,69 +1,58 @@
-import { TransactionType } from "@/generated/prisma/client";
-import { activeWalletAccountWhere } from "@/lib/accounts";
-import { db } from "@/lib/db";
+import { cache } from "react";
 import { convertAmount } from "@/lib/currency";
+import { loadUserAccountSnapshot } from "@/lib/data-loaders";
+import { computeAccountBalancesFromTransactions } from "@/lib/balance-calculation";
 
-type TxRow = {
-  type: TransactionType;
-  amount: number;
-  toAmount?: number | null;
-  fromAccountId: string | null;
-  toAccountId: string | null;
-};
+export {
+  computeAccountBalanceFromTransactions,
+  computeAccountBalancesFromTransactions,
+} from "@/lib/balance-calculation";
 
-export function computeAccountBalanceFromTransactions(
-  startingBalance: number,
-  accountId: string,
-  transactions: TxRow[],
-): number {
-  let balance = startingBalance;
-
-  for (const tx of transactions) {
-    if (tx.type === TransactionType.INCOME && tx.toAccountId === accountId) {
-      balance += tx.amount;
-    } else if (
-      tx.type === TransactionType.EXPENSE &&
-      tx.fromAccountId === accountId
-    ) {
-      balance -= tx.amount;
-    } else if (tx.type === TransactionType.TRANSFER) {
-      if (tx.fromAccountId === accountId) balance -= tx.amount;
-      if (tx.toAccountId === accountId) balance += tx.toAmount ?? tx.amount;
-    }
-  }
-
-  return balance;
-}
-
-export async function getAccountBalance(accountId: string): Promise<number> {
-  const account = await db.walletAccount.findUniqueOrThrow({
-    where: { id: accountId },
-  });
-
-  const transactions = await db.transaction.findMany({
-    where: {
-      OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
-    },
-    select: {
-      type: true,
-      amount: true,
-      toAmount: true,
-      fromAccountId: true,
-      toAccountId: true,
-    },
-  });
-
-  return computeAccountBalanceFromTransactions(
-    Number(account.startingBalance),
-    accountId,
-    transactions.map((t) => ({
-      type: t.type,
-      amount: Number(t.amount),
-      toAmount: t.toAmount != null ? Number(t.toAmount) : null,
-      fromAccountId: t.fromAccountId,
-      toAccountId: t.toAccountId,
-    })),
+export const getUserAccountBalances = cache(async (userId: string) => {
+  const snapshot = await loadUserAccountSnapshot(userId);
+  const transactionsById = new Map(
+    snapshot.flatMap((account) => [
+      ...account.transactionsFrom,
+      ...account.transactionsTo,
+    ]).map((transaction) => [transaction.id, transaction]),
   );
+  const transactions = [...transactionsById.values()].map((transaction) => ({
+    type: transaction.type,
+    amount: Number(transaction.amount),
+    toAmount:
+      transaction.toAmount != null ? Number(transaction.toAmount) : null,
+    fromAccountId: transaction.fromAccountId,
+    toAccountId: transaction.toAccountId,
+  }));
+  const balances = computeAccountBalancesFromTransactions(
+    snapshot.map((account) => ({
+      id: account.id,
+      startingBalance: Number(account.startingBalance),
+    })),
+    transactions,
+  );
+
+  return snapshot.map(({ transactionsFrom, transactionsTo, ...account }) => {
+    void transactionsFrom;
+    void transactionsTo;
+    return {
+      ...account,
+      startingBalance: Number(account.startingBalance),
+      balance: balances.get(account.id) ?? Number(account.startingBalance),
+    };
+  });
+});
+
+export async function getAccountBalance(
+  userId: string,
+  accountId: string,
+): Promise<number> {
+  const accounts = await getUserAccountBalances(userId);
+  const account = accounts.find((item) => item.id === accountId);
+  if (!account) {
+    throw new Error("Account not found");
+  }
+  return account.balance;
 }
 
 export async function getTotalBalanceInCurrency(
@@ -71,22 +60,16 @@ export async function getTotalBalanceInCurrency(
   baseCurrency: string,
   includeHidden = false,
 ): Promise<number> {
-  const accounts = await db.walletAccount.findMany({
-    where: {
-      userId,
-      ...activeWalletAccountWhere,
-      ...(includeHidden ? {} : { isHidden: false }),
-    },
-  });
+  const accounts = await getUserAccountBalances(userId);
 
   let total = 0;
   for (const account of accounts) {
-    const balance = await getAccountBalance(account.id);
+    if (!includeHidden && account.isHidden) continue;
     if (account.currency === baseCurrency) {
-      total += balance;
+      total += account.balance;
     } else {
       const { converted } = await convertAmount(
-        balance,
+        account.balance,
         account.currency,
         baseCurrency,
       );
@@ -98,13 +81,9 @@ export async function getTotalBalanceInCurrency(
 }
 
 export async function recalculateAllBalances(userId: string) {
-  const accounts = await db.walletAccount.findMany({
-    where: { userId, ...activeWalletAccountWhere },
-  });
-  return Promise.all(
-    accounts.map(async (account) => ({
-      accountId: account.id,
-      balance: await getAccountBalance(account.id),
-    })),
-  );
+  const accounts = await getUserAccountBalances(userId);
+  return accounts.map((account) => ({
+    accountId: account.id,
+    balance: account.balance,
+  }));
 }

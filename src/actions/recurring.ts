@@ -13,8 +13,13 @@ import { requireSession } from "@/lib/auth-server";
 import { assertActiveWalletAccounts } from "@/lib/accounts";
 import { db } from "@/lib/db";
 import { processDueRecurringPaymentsForUser } from "@/lib/recurring-processing";
-import { serializeRecurringPayment } from "@/lib/serialize";
-import { addDays } from "date-fns";
+import {
+  loadActiveRecurringPayments,
+  loadUpcomingRecurringPayments,
+  loadUserSettings,
+  loadUserTags,
+} from "@/lib/data-loaders";
+import { expireUserCache } from "@/lib/cache-invalidation";
 
 const recurringSchema = z.object({
   type: z.union([
@@ -68,41 +73,12 @@ async function assertRecurringRelations(
 
 export async function getRecurringPayments(search?: string) {
   const session = await requireSession();
-  const payments = await db.recurringPayment.findMany({
-    where: {
-      userId: session.user.id,
-      isActive: true,
-      ...(search
-        ? { comment: { contains: search, mode: "insensitive" } }
-        : {}),
-    },
-    include: {
-      category: true,
-      account: true,
-      tags: { include: { tag: true } },
-    },
-    orderBy: { nextDueDate: "asc" },
-  });
-  return payments.map(serializeRecurringPayment);
+  return loadActiveRecurringPayments(session.user.id, search);
 }
 
 export async function getUpcomingPayments(days = 30) {
   const session = await requireSession();
-  const until = addDays(new Date(), days);
-  const payments = await db.recurringPayment.findMany({
-    where: {
-      userId: session.user.id,
-      isActive: true,
-      nextDueDate: { lte: until },
-    },
-    include: {
-      category: true,
-      account: true,
-      tags: { include: { tag: true } },
-    },
-    orderBy: { nextDueDate: "asc" },
-  });
-  return payments.map(serializeRecurringPayment);
+  return loadUpcomingRecurringPayments(session.user.id, days);
 }
 
 export async function createRecurringPayment(
@@ -130,6 +106,7 @@ export async function createRecurringPayment(
     },
   });
 
+  expireUserCache(session.user.id, ["recurring"]);
   revalidatePath("/recurring");
   return payment;
 }
@@ -168,6 +145,7 @@ export async function updateRecurringPayment(
     });
   });
 
+  expireUserCache(session.user.id, ["recurring"]);
   revalidatePath("/recurring");
   return payment;
 }
@@ -178,6 +156,7 @@ export async function deleteRecurringPayment(id: string) {
     where: { id, userId: session.user.id },
     data: { isActive: false },
   });
+  expireUserCache(session.user.id, ["recurring"]);
   revalidatePath("/recurring");
 }
 
@@ -185,6 +164,11 @@ export async function processDueRecurringPayments() {
   const session = await requireSession();
   const result = await processDueRecurringPaymentsForUser(session.user.id);
 
+  expireUserCache(session.user.id, [
+    "recurring",
+    "transactions",
+    "comments",
+  ]);
   revalidatePath("/recurring");
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
@@ -206,9 +190,7 @@ const settingsSchema = z.object({
 
 export async function getSettings() {
   const session = await requireSession();
-  return db.userSettings.findUnique({
-    where: { userId: session.user.id },
-  });
+  return loadUserSettings(session.user.id);
 }
 
 export async function updateSettings(
@@ -223,16 +205,14 @@ export async function updateSettings(
     update: data,
   });
 
+  expireUserCache(session.user.id, ["settings"]);
   revalidatePath("/settings");
   return settings;
 }
 
 export async function getTags() {
   const session = await requireSession();
-  return db.tag.findMany({
-    where: { userId: session.user.id },
-    orderBy: { name: "asc" },
-  });
+  return loadUserTags(session.user.id);
 }
 
 export async function createTag(name: string, color = "#888888") {
@@ -240,6 +220,7 @@ export async function createTag(name: string, color = "#888888") {
   const tag = await db.tag.create({
     data: { userId: session.user.id, name, color },
   });
+  expireUserCache(session.user.id, ["tags"]);
   revalidatePath("/settings");
   return tag;
 }
@@ -250,6 +231,7 @@ export async function updateTag(id: string, name: string, color?: string) {
     where: { id, userId: session.user.id },
     data: { name, ...(color && { color }) },
   });
+  expireUserCache(session.user.id, ["tags", "transactions", "recurring"]);
   revalidatePath("/settings");
   revalidatePath("/transactions");
   return tag;
@@ -258,5 +240,6 @@ export async function updateTag(id: string, name: string, color?: string) {
 export async function deleteTag(id: string) {
   const session = await requireSession();
   await db.tag.delete({ where: { id, userId: session.user.id } });
+  expireUserCache(session.user.id, ["tags", "transactions", "recurring"]);
   revalidatePath("/settings");
 }

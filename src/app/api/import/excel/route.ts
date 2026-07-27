@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth-server";
 import { parseExcelWorkbook } from "@/lib/import/excel";
 import { importExcelData } from "@/lib/import/excel-importer";
+import { revalidateUserCache } from "@/lib/cache-invalidation";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -33,6 +34,15 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseExcelWorkbook(buffer);
     const summary = await importExcelData(session.user.id, parsed);
+    revalidateUserCache(session.user.id, [
+      "accounts",
+      "categories",
+      "comments",
+      "recurring",
+      "settings",
+      "tags",
+      "transactions",
+    ]);
 
     return NextResponse.json({ success: true, ...summary });
   } catch (error) {

@@ -1,19 +1,25 @@
 import { getAccounts } from "@/actions/accounts";
 import { getSettings } from "@/actions/recurring";
-import { getAccountBalance } from "@/lib/balance";
+import { getUserAccountBalances } from "@/lib/balance";
+import { requireSession } from "@/lib/auth-server";
 import { pageTitleClass, pageSubtitleClass } from "@/lib/form-field-styles";
 import { AccountsManager } from "@/components/accounts/accounts-manager";
 
 export default async function AccountsPage() {
-  const [accounts, settings] = await Promise.all([getAccounts(), getSettings()]);
-
-  const accountsWithBalance = await Promise.all(
-    accounts.map(async (account) => ({
-      ...account,
-      balance: await getAccountBalance(account.id),
-      startingBalance: Number(account.startingBalance),
-    })),
+  const session = await requireSession();
+  const [accounts, settings, balances] = await Promise.all([
+    getAccounts(),
+    getSettings(),
+    getUserAccountBalances(session.user.id),
+  ]);
+  const balanceByAccountId = new Map(
+    balances.map((account) => [account.id, account.balance]),
   );
+  const accountsWithBalance = accounts.map((account) => ({
+    ...account,
+    balance: balanceByAccountId.get(account.id) ?? Number(account.startingBalance),
+    startingBalance: Number(account.startingBalance),
+  }));
 
   return (
     <div className="space-y-6">

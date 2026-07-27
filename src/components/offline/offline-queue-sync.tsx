@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createTransaction } from "@/actions/transactions";
+import { createTransactionsBatch } from "@/actions/transactions";
 import { OFFLINE_QUEUE_CHANGED_EVENT } from "@/lib/offline-db";
 import {
   getPendingTransactions,
@@ -39,13 +39,17 @@ export function OfflineQueueSync() {
     dispatchSyncStatus("syncing");
 
     let hadError = false;
-    for (const tx of pending) {
-      try {
-        await createTransaction(pendingTransactionToCreateInput(tx));
-        await removePendingTransaction(tx.id);
-      } catch {
-        hadError = true;
+    try {
+      await createTransactionsBatch(
+        pending.map((transaction) =>
+          pendingTransactionToCreateInput(transaction),
+        ),
+      );
+      for (const transaction of pending) {
+        await removePendingTransaction(transaction.id);
       }
+    } catch {
+      hadError = true;
     }
 
     flushingRef.current = false;

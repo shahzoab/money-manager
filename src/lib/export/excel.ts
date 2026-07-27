@@ -3,7 +3,7 @@ import { activeWalletAccountWhere } from "@/lib/accounts";
 import { db } from "@/lib/db";
 
 export async function generateExcelExport(userId: string): Promise<Buffer> {
-  const [expenses, income, transfers, accounts, settings] = await Promise.all([
+  const [expenses, income, transfers, accounts, settings] = await db.$transaction([
     db.transaction.findMany({
       where: { userId, type: "EXPENSE" },
       include: { category: true, fromAccount: true },
@@ -104,7 +104,7 @@ export async function generateExcelExport(userId: string): Promise<Buffer> {
 
 export async function generateBackupJson(userId: string): Promise<string> {
   const [accounts, categories, transactions, tags, recurring, settings] =
-    await Promise.all([
+    await db.$transaction([
       db.walletAccount.findMany({
         where: { userId, ...activeWalletAccountWhere },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],

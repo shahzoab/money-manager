@@ -1,14 +1,18 @@
 "use server";
 
 import { requireSession } from "@/lib/auth-server";
-import { activeWalletAccountWhere } from "@/lib/accounts";
-import { db } from "@/lib/db";
-import { buildDateFilter, getPeriodRange, type Period } from "@/lib/periods";
-import { getTotalBalanceInCurrency } from "@/lib/balance";
-import { serializeAccount, serializeTransaction } from "@/lib/serialize";
-import { buildTransactionSummary } from "@/lib/transaction-summary";
-import { reportableTransactionWhere } from "@/lib/transaction-reports";
+import { getPeriodRange, type Period } from "@/lib/periods";
+import {
+  getTotalBalanceInCurrency,
+} from "@/lib/balance";
+import {
+  loadPeriodTransactions,
+  loadUserAccounts,
+  loadUserCategories,
+  loadUserSettings,
+} from "@/lib/data-loaders";
 import { TransactionType } from "@/generated/prisma/client";
+import { summarizeTransactions } from "@/lib/dashboard-aggregation";
 
 export async function getDashboardData(options?: {
   period?: Period;
@@ -19,7 +23,7 @@ export async function getDashboardData(options?: {
   const session = await requireSession();
   const userId = session.user.id;
 
-  const settings = await db.userSettings.findUnique({ where: { userId } });
+  const settings = await loadUserSettings(userId);
   const baseCurrency = settings?.defaultCurrency ?? "USD";
   const period = (options?.period ?? settings?.homePeriod ?? "month") as Period;
   const weekStartsOn = (settings?.firstDayOfWeek ?? 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -31,48 +35,18 @@ export async function getDashboardData(options?: {
     weekStartsOn,
   );
 
-  const accountFilter = options?.accountId
-    ? {
-        OR: [
-          { fromAccountId: options.accountId },
-          { toAccountId: options.accountId },
-        ],
-      }
-    : {};
-
-  const where = {
-    userId,
-    ...buildDateFilter(from, to),
-    ...accountFilter,
-  };
-
-  const transactionInclude = {
-    category: true,
-    fromAccount: true,
-    toAccount: true,
-    tags: { include: { tag: true } },
-  } as const;
-
-  const [totalBalance, aggregates, recentTransactions, accounts] = await Promise.all([
+  const [totalBalance, transactions, accounts] = await Promise.all([
     getTotalBalanceInCurrency(userId, baseCurrency),
-    db.transaction.groupBy({
-      by: ["type"],
-      where: { ...where, ...reportableTransactionWhere },
-      _sum: { amountInBaseCurrency: true },
-    }),
-    db.transaction.findMany({
-      where,
-      include: transactionInclude,
-      orderBy: { date: "desc" },
-      take: 20,
-    }),
-    db.walletAccount.findMany({
-      where: { userId, isHidden: false, ...activeWalletAccountWhere },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
+    loadPeriodTransactions(
+      userId,
+      from?.toISOString() ?? "",
+      to?.toISOString() ?? "",
+      options?.accountId ?? "",
+    ),
+    loadUserAccounts(userId),
   ]);
-
-  const summary = buildTransactionSummary(aggregates);
+  const reportable = transactions.filter((transaction) => !transaction.isReconciliation);
+  const summary = summarizeTransactions(reportable);
 
   return {
     totalBalance,
@@ -82,8 +56,8 @@ export async function getDashboardData(options?: {
     net: summary.net,
     baseCurrency,
     period,
-    transactions: recentTransactions.map(serializeTransaction),
-    accounts: accounts.map(serializeAccount),
+    transactions: transactions.slice(0, 20),
+    accounts: accounts.filter((account) => !account.isHidden),
     settings,
   };
 }
@@ -96,7 +70,7 @@ export async function getChartData(options?: {
 }) {
   const session = await requireSession();
   const userId = session.user.id;
-  const settings = await db.userSettings.findUnique({ where: { userId } });
+  const settings = await loadUserSettings(userId);
   const period = (options?.period ?? "month") as Period;
   const weekStartsOn = (settings?.firstDayOfWeek ?? 1) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const { from, to } = getPeriodRange(
@@ -106,29 +80,14 @@ export async function getChartData(options?: {
     weekStartsOn,
   );
 
-  const accountFilter = options?.accountId
-    ? {
-        OR: [
-          { fromAccountId: options.accountId },
-          { toAccountId: options.accountId },
-        ],
-      }
-    : {};
-
   const [transactions, categories] = await Promise.all([
-    db.transaction.findMany({
-      where: {
-        userId,
-        ...buildDateFilter(from, to),
-        ...accountFilter,
-        ...reportableTransactionWhere,
-      },
-      include: { category: true },
-    }),
-    db.category.findMany({
-      where: { userId },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
+    loadPeriodTransactions(
+      userId,
+      from?.toISOString() ?? "",
+      to?.toISOString() ?? "",
+      options?.accountId ?? "",
+    ),
+    loadUserCategories(userId),
   ]);
 
   const byCategory: Record<string, number> = {};
@@ -137,6 +96,7 @@ export async function getChartData(options?: {
   let totalExpense = 0;
 
   for (const tx of transactions) {
+    if (tx.isReconciliation) continue;
     const amount = Number(tx.amountInBaseCurrency);
     const monthKey = tx.date.toISOString().slice(0, 7);
 

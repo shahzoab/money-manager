@@ -5,7 +5,8 @@ import { z } from "zod";
 import { CategoryType } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
-import { serializeCategory } from "@/lib/serialize";
+import { loadUserCategories } from "@/lib/data-loaders";
+import { expireUserCache } from "@/lib/cache-invalidation";
 
 const categorySchema = z.object({
   name: z.string().min(1),
@@ -19,14 +20,7 @@ const categoryOrderBy = [{ sortOrder: "asc" as const }, { name: "asc" as const }
 
 export async function getCategories(type?: CategoryType) {
   const session = await requireSession();
-  const categories = await db.category.findMany({
-    where: {
-      userId: session.user.id,
-      ...(type ? { type } : {}),
-    },
-    orderBy: categoryOrderBy,
-  });
-  return categories.map(serializeCategory);
+  return loadUserCategories(session.user.id, type);
 }
 
 async function nextCategorySortOrder(userId: string, type: CategoryType): Promise<number> {
@@ -46,6 +40,7 @@ export async function createCategory(input: z.infer<typeof categorySchema>) {
     data: { ...data, userId: session.user.id, sortOrder },
   });
 
+  expireUserCache(session.user.id, ["categories"]);
   revalidatePath("/categories");
   return category;
 }
@@ -62,6 +57,7 @@ export async function updateCategory(
     data,
   });
 
+  expireUserCache(session.user.id, ["categories"]);
   revalidatePath("/categories");
   revalidatePath("/charts");
   return category;
@@ -94,6 +90,7 @@ export async function reorderCategories(type: CategoryType, orderedIds: string[]
     ),
   );
 
+  expireUserCache(userId, ["categories"]);
   revalidatePath("/categories");
   revalidatePath("/transactions");
   revalidatePath("/charts");
@@ -110,5 +107,6 @@ export async function deleteCategory(id: string, reassignToId?: string) {
   }
 
   await db.category.delete({ where: { id, userId: session.user.id } });
+  expireUserCache(session.user.id, ["categories", "transactions"]);
   revalidatePath("/categories");
 }

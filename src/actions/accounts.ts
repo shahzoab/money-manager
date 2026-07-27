@@ -7,8 +7,9 @@ import { requireSession } from "@/lib/auth-server";
 import { activeWalletAccountWhere } from "@/lib/accounts";
 import { getAccountBalance } from "@/lib/balance";
 import { db } from "@/lib/db";
-import { serializeAccount } from "@/lib/serialize";
+import { loadUserAccounts } from "@/lib/data-loaders";
 import { createTransaction } from "@/actions/transactions";
+import { expireUserCache } from "@/lib/cache-invalidation";
 
 const BALANCE_EPSILON = 0.0001;
 
@@ -34,11 +35,7 @@ const accountOrderBy = [{ sortOrder: "asc" as const }, { name: "asc" as const }]
 
 export async function getAccounts() {
   const session = await requireSession();
-  const accounts = await db.walletAccount.findMany({
-    where: { userId: session.user.id, ...activeWalletAccountWhere },
-    orderBy: accountOrderBy,
-  });
-  return accounts.map(serializeAccount);
+  return loadUserAccounts(session.user.id);
 }
 
 async function nextAccountSortOrder(userId: string): Promise<number> {
@@ -66,6 +63,7 @@ export async function createAccount(input: z.infer<typeof accountSchema>) {
     data: { ...data, userId: session.user.id, sortOrder },
   });
 
+  expireUserCache(session.user.id, ["accounts"]);
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
   return account;
@@ -97,6 +95,7 @@ export async function updateAccount(
     data,
   });
 
+  expireUserCache(session.user.id, ["accounts"]);
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
   return account;
@@ -129,6 +128,7 @@ export async function reorderAccounts(orderedIds: string[]) {
     ),
   );
 
+  expireUserCache(userId, ["accounts"]);
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
@@ -170,6 +170,7 @@ export async function deleteAccount(id: string) {
     }
   });
 
+  expireUserCache(userId, ["accounts", "recurring"]);
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
   revalidatePath("/recurring");
@@ -178,6 +179,7 @@ export async function deleteAccount(id: string) {
 export async function recalculateBalances() {
   const session = await requireSession();
   const { recalculateAllBalances } = await import("@/lib/balance");
+  expireUserCache(session.user.id, ["accounts", "transactions"]);
   return recalculateAllBalances(session.user.id);
 }
 
@@ -194,7 +196,7 @@ export async function reconcileAccountBalance(
     throw new Error("Account not found");
   }
 
-  const currentBalance = await getAccountBalance(accountId);
+  const currentBalance = await getAccountBalance(session.user.id, accountId);
   const delta = targetBalance - currentBalance;
 
   if (Math.abs(delta) < BALANCE_EPSILON) {
@@ -216,6 +218,7 @@ export async function reconcileAccountBalance(
     isReconciliation: true,
   });
 
+  expireUserCache(session.user.id, ["accounts", "transactions", "comments"]);
   revalidatePath("/accounts");
 
   return {

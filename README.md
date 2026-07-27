@@ -54,6 +54,7 @@ Edit `.env` and set at minimum:
 - `DATABASE_URL`
 - `BETTER_AUTH_SECRET` (32+ random characters)
 - `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000`)
+- `REGISTRATION_ENABLED` (`true` by default; set to `false` to stop new accounts)
 
 Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPLOADTHING_TOKEN`, VAPID keys for push, and `CRON_SECRET` for automatic recurring processing.
 
@@ -90,6 +91,7 @@ Open [http://localhost:3000](http://localhost:3000), register, and start trackin
 | `npm run db:migrate`     | Create/run migrations (local dev)        |
 | `npm run db:deploy`      | Apply pending migrations (production/CI) |
 | `npm run db:studio`      | Open Prisma Studio                       |
+| `npm run db:backfill-transactions` | One-time currency backfill    |
 | `npm run vapid:generate` | Generate Web Push VAPID keys             |
 
 ## Automatic recurring processing
@@ -100,10 +102,14 @@ Use [cron-job.org](https://cron-job.org/) as the free external scheduler:
 
 - URL: `https://YOUR_VERCEL_DOMAIN/api/recurring/process-due`
 - Method: `GET`
-- Schedule: every 1 minute
+- Schedule: every 1 hour
 - Header name: `Authorization`
 - Header value: `Bearer YOUR_CRON_SECRET`
 - Expected response: `{"processed": number}`
+
+The hourly cadence uses at most 744 empty database checks in a 31-day month,
+compared with 44,640 checks for a minutely schedule. Use the in-app
+**Process due now** action when an immediate run is needed.
 
 Set the same `CRON_SECRET` in your Vercel project environment and in cron-job.org's request header. External schedulers cannot call `localhost`; for local development, run the curl command above with `NEXT_PUBLIC_APP_URL=http://localhost:3001` or call the local URL directly:
 
@@ -117,6 +123,16 @@ curl "http://localhost:3001/api/recurring/process-due" \
 Deploy to Vercel with a hosted PostgreSQL (Neon, Supabase, Prisma Postgres). Set all env vars from `.env.example`.
 
 For pooled providers, set both `DATABASE_URL` (pooled, app runtime) and `DIRECT_URL` (direct, migrations). Vercel runs `prisma migrate deploy` automatically during `npm run build`.
+
+Before deploying this operation-optimized release, run the idempotent
+transaction backfill once against production:
+
+```bash
+npm run db:backfill-transactions
+```
+
+See [`DATABASE_OPERATIONS.md`](./DATABASE_OPERATIONS.md) for the operation
+budget, monitoring thresholds, and emergency registration control.
 
 When deploying the baseline `0_init` migration to an existing production database, mark it as applied **before** the deploy that includes the migration file (do not re-run CREATE TABLE SQL on prod):
 

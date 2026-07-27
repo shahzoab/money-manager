@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 
 const FRANKFURTER_V2_URL = "https://api.frankfurter.dev/v2/rate";
@@ -20,27 +21,36 @@ export async function getExchangeRate(
 ): Promise<number> {
   if (from === to) return 1;
 
-  const cached = await db.exchangeRate.findFirst({
-    where: { base: from, target: to },
-    orderBy: { fetchedAt: "desc" },
-  });
+  return unstable_cache(
+    async () => {
+      const cached = await db.exchangeRate.findFirst({
+        where: { base: from, target: to },
+        orderBy: { fetchedAt: "desc" },
+      });
 
-  if (cached && Date.now() - cached.fetchedAt.getTime() < 24 * 60 * 60 * 1000) {
-    return Number(cached.rate);
-  }
+      if (
+        cached &&
+        Date.now() - cached.fetchedAt.getTime() < 24 * 60 * 60 * 1000
+      ) {
+        return Number(cached.rate);
+      }
 
-  try {
-    const rate = await fetchRateFromApi(from, to);
+      try {
+        const rate = await fetchRateFromApi(from, to);
 
-    await db.exchangeRate.create({
-      data: { base: from, target: to, rate },
-    });
+        await db.exchangeRate.create({
+          data: { base: from, target: to, rate },
+        });
 
-    return rate;
-  } catch {
-    if (cached) return Number(cached.rate);
-    return 1;
-  }
+        return rate;
+      } catch {
+        if (cached) return Number(cached.rate);
+        return 1;
+      }
+    },
+    ["exchange-rate", from, to],
+    { revalidate: 86_400 },
+  )();
 }
 
 export async function convertAmount(

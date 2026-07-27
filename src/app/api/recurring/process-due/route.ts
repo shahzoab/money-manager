@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { processDueRecurringPaymentsForUser } from "@/lib/recurring-processing";
+import { revalidateUserCache } from "@/lib/cache-invalidation";
 
 async function processDueRequest(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -18,13 +19,20 @@ async function processDueRequest(request: Request) {
   }
 
   const result = await processDueRecurringPaymentsForUser();
+  for (const userId of result.affectedUserIds) {
+    revalidateUserCache(userId, ["recurring", "transactions", "comments"]);
+  }
 
   revalidatePath("/recurring");
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/charts");
 
-  return NextResponse.json(result);
+  return NextResponse.json({
+    created: result.created,
+    notified: result.notified,
+    processed: result.processed,
+  });
 }
 
 export async function GET(request: Request) {

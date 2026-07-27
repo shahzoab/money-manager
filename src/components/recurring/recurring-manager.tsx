@@ -3,7 +3,6 @@
 import { createElement, useEffect, useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { CalendarClock, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { TransactionType, RecurringFrequency } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -159,7 +158,6 @@ export function RecurringManager({
   upcoming: Payment[];
   defaultTab: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [search, setSearch] = useState("");
@@ -284,7 +282,6 @@ export function RecurringManager({
         setOpen(false);
         setEditingPayment(null);
         setForm(emptyForm(defaultAccountId));
-        router.refresh();
       } catch {
         toast.error(editingPayment ? "Failed to update" : "Failed to create");
       }

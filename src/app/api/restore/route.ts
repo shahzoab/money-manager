@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
+import { revalidateUserCache } from "@/lib/cache-invalidation";
 
 type BackupRecord = Record<string, unknown>;
 
@@ -214,6 +215,15 @@ export async function POST(request: Request) {
     }
   });
 
+  revalidateUserCache(userId, [
+    "accounts",
+    "categories",
+    "comments",
+    "recurring",
+    "settings",
+    "tags",
+    "transactions",
+  ]);
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/charts");

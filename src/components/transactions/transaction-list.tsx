@@ -211,7 +211,6 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
           startDeleteTransition(async () => {
             await deleteTransaction(pendingDelete);
             setPendingDelete(null);
-            router.refresh();
             toast.success("Transaction deleted");
           });
         }}

@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "npm run db:deploy && next build --webpack",
     "start": "next start",
+    "test": "tsx --test tests/*.test.ts",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -13,6 +14,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "db:backfill-transactions": "tsx scripts/backfill-transactions.ts",
     "db:dev": "prisma dev",
     "vapid:generate": "web-push generate-vapid-keys",
     "postinstall": "prisma generate"

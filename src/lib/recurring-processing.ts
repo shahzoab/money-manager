@@ -17,6 +17,7 @@ export type RecurringProcessingResult = {
   created: number;
   notified: number;
   processed: number;
+  affectedUserIds: string[];
 };
 
 function getNextDueDate(date: Date, frequency: RecurringFrequency): Date {
@@ -95,7 +96,9 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     created: 0,
     notified: 0,
     processed: 0,
+    affectedUserIds: [],
   };
+  const affectedUserIds = new Set<string>();
 
   for (const payment of duePayments) {
     const amount = Number(payment.amount);
@@ -117,6 +120,7 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
 
       result.notified += 1;
       result.processed += 1;
+      affectedUserIds.add(payment.userId);
       const pushResult = await sendPushNotificationToUser(payment.userId, {
         title: payment.comment?.trim() || "Recurring payment due",
         body: amount.toFixed(2),
@@ -178,6 +182,7 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
 
     result.created += 1;
     result.processed += 1;
+    affectedUserIds.add(payment.userId);
     const pushResult = await sendPushNotificationToUser(payment.userId, {
       title: payment.comment?.trim() || "Recurring payment processed",
       body: amount.toFixed(2),
@@ -194,5 +199,6 @@ export async function processDueRecurringPaymentsForUser(userId?: string) {
     }
   }
 
+  result.affectedUserIds = [...affectedUserIds];
   return result;
 }

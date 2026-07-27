@@ -40,7 +40,6 @@ function AddTransactionFormInner() {
               await queuePendingTransaction(data);
               toast.success("Saved offline — will sync when connected");
               router.push("/transactions");
-              router.refresh();
             } catch {
               toast.error("Failed to save transaction offline");
             }
@@ -51,7 +50,6 @@ function AddTransactionFormInner() {
             const result = await createTransaction(data);
             toast.success("Transaction added");
             router.push(`/transactions/${result.id}`);
-            router.refresh();
           } catch {
             toast.error("Failed to add transaction");
           }

@@ -340,7 +340,6 @@ export function SettingsPanel({
                   await createTag(newTag.trim());
                   setNewTag("");
                   toast.success("Tag created");
-                  router.refresh();
                 })
               }
             >
@@ -540,7 +539,6 @@ export function SettingsPanel({
             await deleteTag(pendingTagDelete.id);
             setPendingTagDelete(null);
             toast.success("Tag deleted");
-            router.refresh();
           });
         }}
       />
@@ -585,7 +583,6 @@ export function SettingsPanel({
                   setEditingTag(null);
                   setEditingTagName("");
                   toast.success("Tag updated");
-                  router.refresh();
                 });
               }}
             >

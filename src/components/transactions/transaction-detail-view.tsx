@@ -57,7 +57,6 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
         setConfirmOpen(false);
         toast.success("Transaction deleted");
         router.push("/transactions");
-        router.refresh();
       } catch {
         toast.error("Failed to delete transaction");
       }

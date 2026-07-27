@@ -35,7 +35,6 @@ export function EditTransactionForm({
             await updateTransaction(transactionId, data);
             toast.success("Transaction updated");
             router.push(`/transactions/${transactionId}`);
-            router.refresh();
           } catch {
             toast.error("Failed to update transaction");
           }

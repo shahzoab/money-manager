@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth-server";
-import { initializeUserData } from "@/actions/user";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLockProvider } from "@/components/security/app-lock";
 import { getSettings } from "@/actions/recurring";
@@ -9,7 +8,28 @@ import { getCategories } from "@/actions/categories";
 import { getCommentSuggestions } from "@/actions/transactions";
 import { OfflineQueueSync } from "@/components/offline/offline-queue-sync";
 import { OfflineSync } from "@/components/offline/offline-sync";
-import { getAccountBalance } from "@/lib/balance";
+import { getUserAccountBalances } from "@/lib/balance";
+
+type AppBootstrapData = {
+  settings: Awaited<ReturnType<typeof getSettings>>;
+  dashboard: Awaited<ReturnType<typeof getDashboardData>>;
+  categories: Awaited<ReturnType<typeof getCategories>>;
+  comments: Awaited<ReturnType<typeof getCommentSuggestions>>;
+  accountBalances: Awaited<ReturnType<typeof getUserAccountBalances>>;
+};
+
+async function loadAppBootstrapData(userId: string): Promise<AppBootstrapData> {
+  const [settings, dashboard, categories, comments, accountBalances] =
+    await Promise.all([
+      getSettings(),
+      getDashboardData(),
+      getCategories(),
+      getCommentSuggestions(),
+      getUserAccountBalances(userId),
+    ]);
+
+  return { settings, dashboard, categories, comments, accountBalances };
+}
 
 export default async function AppLayout({
   children,
@@ -21,27 +41,29 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  await initializeUserData();
-  const settings = await getSettings();
-  const [dashData, categories, comments] = await Promise.all([
-    getDashboardData(),
-    getCategories(),
-    getCommentSuggestions(),
-  ]);
-
-  const accountsWithBalance = await Promise.all(
-    dashData.accounts.map(async (a) => ({
-      id: a.id,
-      name: a.name,
-      currency: a.currency,
-      color: a.color,
-      icon: a.icon,
-      balance: await getAccountBalance(a.id),
-      isDefault: a.isDefault,
-      sortOrder: a.sortOrder,
-      isHidden: a.isHidden,
-    })),
+  const {
+    settings,
+    dashboard,
+    categories,
+    comments,
+    accountBalances,
+  } = await loadAppBootstrapData(session.user.id);
+  const visibleAccountIds = new Set(
+    dashboard.accounts.map((account) => account.id),
   );
+  const accountsWithBalance = accountBalances
+    .filter((account) => visibleAccountIds.has(account.id))
+    .map((account) => ({
+      id: account.id,
+      name: account.name,
+      currency: account.currency,
+      color: account.color,
+      icon: account.icon,
+      balance: account.balance,
+      isDefault: account.isDefault,
+      sortOrder: account.sortOrder,
+      isHidden: account.isHidden,
+    }));
 
   return (
     <AppLockProvider
@@ -60,7 +82,7 @@ export default async function AppLayout({
           sortOrder: c.sortOrder,
         }))}
         comments={comments}
-        transactions={dashData.transactions.map((t) => ({
+        transactions={dashboard.transactions.map((t) => ({
           id: t.id,
           type: t.type,
           amount: Number(t.amount),
@@ -72,7 +94,7 @@ export default async function AppLayout({
         }))}
       />
       <OfflineQueueSync />
-      <AppShell totalBalance={dashData.totalBalance}>
+      <AppShell totalBalance={dashboard.totalBalance}>
         {children}
       </AppShell>
     </AppLockProvider>

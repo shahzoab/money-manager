@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TransactionType } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
+import { getTransactionHref } from "@/lib/transaction-navigation";
 
 export type TransactionRow = {
   id: string;
@@ -38,6 +39,11 @@ type TransactionListProps = {
 
 export function TransactionList({ transactions, currency, showYear = false }: TransactionListProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const returnTo =
+    pathname === "/transactions" && query ? `/transactions?${query}` : "/transactions";
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [deleting, startDeleteTransition] = useTransition();
 
@@ -83,7 +89,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                     toast.message("Waiting to sync");
                     return;
                   }
-                  router.push(`/transactions/${tx.id}`);
+                  router.push(getTransactionHref(tx.id, returnTo));
                 }}
               >
                 <td className="whitespace-nowrap px-3 py-4 tabular-nums text-muted-foreground sm:px-4 lg:py-3">
@@ -171,7 +177,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/transactions/${tx.id}/edit`);
+                          router.push(getTransactionHref(tx.id, returnTo, true));
                         }}
                       >
                         <Pencil className="h-3.5 w-3.5" />

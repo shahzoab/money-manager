@@ -17,12 +17,14 @@ import {
 import { cn } from "@/lib/utils";
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { toast } from "sonner";
+import { getTransactionHref } from "@/lib/transaction-navigation";
 
 type TransactionDetail = Awaited<ReturnType<typeof getTransaction>>;
 
 type TransactionDetailViewProps = {
   transaction: TransactionDetail;
   currency: string;
+  returnTo?: string;
 };
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -36,7 +38,11 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-export function TransactionDetailView({ transaction, currency }: TransactionDetailViewProps) {
+export function TransactionDetailView({
+  transaction,
+  currency,
+  returnTo = "/transactions",
+}: TransactionDetailViewProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -56,7 +62,7 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
         await deleteTransaction(transaction.id);
         setConfirmOpen(false);
         toast.success("Transaction deleted");
-        router.push("/transactions");
+        router.push(returnTo);
       } catch {
         toast.error("Failed to delete transaction");
       }
@@ -207,7 +213,7 @@ export function TransactionDetailView({ transaction, currency }: TransactionDeta
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => router.push(`/transactions/${transaction.id}/edit`)}
+            onClick={() => router.push(getTransactionHref(transaction.id, returnTo, true))}
           >
             <Pencil className="mr-2 h-4 w-4" />
             Edit

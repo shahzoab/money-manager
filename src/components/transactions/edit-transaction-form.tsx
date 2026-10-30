@@ -12,11 +12,13 @@ import { toast } from "sonner";
 type EditTransactionFormProps = {
   transactionId: string;
   initialValues: Partial<TransactionFormValues>;
+  detailHref: string;
 };
 
 export function EditTransactionForm({
   transactionId,
   initialValues,
+  detailHref,
 }: EditTransactionFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -27,14 +29,14 @@ export function EditTransactionForm({
       mode="edit"
       submitLabel="Save Changes"
       pending={pending}
-      cancelHref={`/transactions/${transactionId}`}
+      cancelHref={detailHref}
       initialValues={initialValues}
       onSubmit={(data) => {
         startTransition(async () => {
           try {
             await updateTransaction(transactionId, data);
             toast.success("Transaction updated");
-            router.push(`/transactions/${transactionId}`);
+            router.push(detailHref);
           } catch {
             toast.error("Failed to update transaction");
           }

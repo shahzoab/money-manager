@@ -4,13 +4,21 @@ import { getTransaction } from "@/actions/transactions";
 import { EditTransactionForm } from "@/components/transactions/edit-transaction-form";
 import { TransactionPageHeader } from "@/components/transactions/transaction-page-header";
 import { TransactionPageShell } from "@/components/transactions/transaction-page-shell";
+import {
+  getTransactionHref,
+  getTransactionsReturnHref,
+} from "@/lib/transaction-navigation";
 
 export default async function EditTransactionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string | string[] }>;
 }) {
   const { id } = await params;
+  const returnTo = getTransactionsReturnHref((await searchParams).returnTo);
+  const detailHref = getTransactionHref(id, returnTo);
 
   let transaction;
   try {
@@ -36,10 +44,14 @@ export default async function EditTransactionPage({
       <TransactionPageHeader
         title="Edit Transaction"
         subtitle="Update transaction details"
-        backHref={`/transactions/${id}`}
+        backHref={detailHref}
         backLabel="Details"
       />
-      <EditTransactionForm transactionId={id} initialValues={initialValues} />
+      <EditTransactionForm
+        transactionId={id}
+        initialValues={initialValues}
+        detailHref={detailHref}
+      />
     </TransactionPageShell>
   );
 }

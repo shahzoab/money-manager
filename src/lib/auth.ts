@@ -3,6 +3,9 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "@/lib/db";
 import { provisionUserData } from "@/lib/user-provisioning";
 import { isRegistrationEnabled } from "@/lib/registration";
+import { getGoogleProvider } from "@/lib/google-auth";
+
+const google = getGoogleProvider();
 
 export const auth = betterAuth({
   database: prismaAdapter(db, {
@@ -13,14 +16,10 @@ export const auth = betterAuth({
     minPasswordLength: 8,
   },
   socialProviders: {
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? {
-          google: {
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          },
-        }
-      : {}),
+    ...(google ? { google } : {}),
+  },
+  onAPIError: {
+    errorURL: "/login",
   },
   user: {
     additionalFields: {},

@@ -23,14 +23,22 @@ import { toast } from "sonner";
 
 export function LoginForm({
   registrationEnabled,
+  googleEnabled,
+  oauthError,
 }: {
   registrationEnabled: boolean;
+  googleEnabled: boolean;
+  oauthError: boolean;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(
+    oauthError ? "Google sign-in could not be completed. Please try again." : null,
+  );
 
   async function handleSignIn(event: React.FormEvent) {
     event.preventDefault();
@@ -57,7 +65,22 @@ export function LoginForm({
   }
 
   async function handleGoogle() {
-    await signIn.social({ provider: "google", callbackURL: "/dashboard" });
+    setGoogleLoading(true);
+    setGoogleError(null);
+    try {
+      const { error } = await signIn.social({
+        provider: "google",
+        callbackURL: "/dashboard",
+        errorCallbackURL: "/login",
+      });
+      if (error) {
+        setGoogleError(error.message ?? "Google sign-in failed. Please try again.");
+      }
+    } catch {
+      setGoogleError("Unable to connect to Google sign-in. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (
@@ -102,7 +125,11 @@ export function LoginForm({
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading || googleLoading}
+                >
                   Sign In
                 </Button>
               </form>
@@ -138,7 +165,11 @@ export function LoginForm({
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={loading || googleLoading}
+                  >
                     Create Account
                   </Button>
                 </form>
@@ -157,9 +188,25 @@ export function LoginForm({
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleGoogle}>
-            Continue with Google
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogle}
+            disabled={!googleEnabled || loading || googleLoading}
+          >
+            {googleLoading ? "Connecting to Google…" : "Continue with Google"}
           </Button>
+          {!googleEnabled ? (
+            <p className="mt-3 text-center text-sm text-muted-foreground">
+              Google sign-in is currently unavailable. Please use email and password.
+            </p>
+          ) : null}
+          {googleError ? (
+            <p role="alert" className="mt-3 text-center text-sm text-destructive">
+              {googleError}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

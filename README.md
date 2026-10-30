@@ -58,6 +58,18 @@ Edit `.env` and set at minimum:
 
 Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `UPLOADTHING_TOKEN`, VAPID keys for push, and `CRON_SECRET` for automatic recurring processing.
 
+#### Enable Google sign-up and sign-in
+
+1. In [Google Auth Platform](https://console.cloud.google.com/auth/clients), create an OAuth client with application type **Web application** and configure its consent screen. If the app is in Testing, add the Google accounts you will use as test users.
+2. Add these **Authorized redirect URIs** to that client (replace the production domain with your own):
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://YOUR_VERCEL_DOMAIN/api/auth/callback/google`
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in your local `.env` and Vercel environment settings. Both are required; the Google button is disabled when either is missing. Keep the secret server-side.
+4. Set `BETTER_AUTH_URL` to the exact app origin in each environment: `http://localhost:3000` locally and your HTTPS domain in production. If using another local port, update both this URL and the registered redirect URI to match.
+5. Restart the local server and redeploy Vercel after changing environment variables. Browser auth requests use the current site's origin.
+
+Google handles registration and sign-in through the same **Continue with Google** button. `REGISTRATION_ENABLED=false` blocks creation of new users, including Google users, while existing users can still sign in.
+
 To generate VAPID keys for Web Push:
 
 ```bash

@@ -7,23 +7,28 @@ import { createTransaction } from "@/actions/transactions";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { queuePendingTransaction } from "@/lib/offline-data";
 import { toast } from "sonner";
+import { getTransactionHref, getTransactionsReturnHref } from "@/lib/transaction-navigation";
 
-function parseTypeParam(value: string | null): TransactionType {
+function parseTypeParam(value: string | null): TransactionType | undefined {
   const map: Record<string, TransactionType> = {
     expense: TransactionType.EXPENSE,
     income: TransactionType.INCOME,
     transfer: TransactionType.TRANSFER,
   };
-  if (!value) return TransactionType.EXPENSE;
-  return map[value.toLowerCase()] ?? TransactionType.EXPENSE;
+  if (!value) return undefined;
+  return map[value.toLowerCase()];
 }
 
 function AddTransactionFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const returnTo = getTransactionsReturnHref(searchParams.get("returnTo") ?? undefined);
 
   const defaultType = parseTypeParam(searchParams.get("type"));
+  const accountId = searchParams.get("account");
+  const categoryId = searchParams.get("category");
+  const selectedAccountId = accountId && accountId !== "all" ? accountId : undefined;
 
   return (
     <TransactionForm
@@ -31,15 +36,20 @@ function AddTransactionFormInner() {
       submitLabel="Save Transaction"
       pending={pending}
       autoFocusAmount
-      cancelHref="/transactions"
-      initialValues={{ type: defaultType }}
+      cancelHref={returnTo}
+      initialValues={{
+        type: defaultType,
+        categoryId: categoryId && categoryId !== "all" ? categoryId : undefined,
+        fromAccountId: selectedAccountId,
+        toAccountId: defaultType === TransactionType.TRANSFER ? undefined : selectedAccountId,
+      }}
       onSubmit={(data) => {
         startTransition(async () => {
           if (!navigator.onLine) {
             try {
               await queuePendingTransaction(data);
               toast.success("Saved offline — will sync when connected");
-              router.push("/transactions");
+              router.push(returnTo);
             } catch {
               toast.error("Failed to save transaction offline");
             }
@@ -49,7 +59,7 @@ function AddTransactionFormInner() {
           try {
             const result = await createTransaction(data);
             toast.success("Transaction added");
-            router.push(`/transactions/${result.id}`);
+            router.push(getTransactionHref(result.id, returnTo));
           } catch {
             toast.error("Failed to add transaction");
           }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { MobileBottomBar } from "@/components/layout/mobile-bottom-bar";
 import { formatAmount, wholeNumberFormat } from "@/lib/currency-format";
+import { getAddTransactionHref } from "@/lib/transaction-navigation";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -87,6 +88,8 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const addTransactionHref = getAddTransactionHref(pathname, searchParams);
   const [navOpen, setNavOpen] = useState(false);
 
   const hideFab = shouldHideFab(pathname);
@@ -97,14 +100,14 @@ export function AppShell({
         const tag = (e.target as HTMLElement).tagName;
         if (tag !== "INPUT" && tag !== "TEXTAREA") {
           if (!isTransactionFormPage(pathname)) {
-            router.push("/transactions/new");
+            router.push(addTransactionHref);
           }
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [pathname, router]);
+  }, [pathname, router, addTransactionHref]);
 
   return (
     <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background">
@@ -168,7 +171,7 @@ export function AppShell({
               </div>
             )}
             <Button size="sm" className="max-lg:hidden gap-1.5" asChild>
-              <Link href="/transactions/new">
+              <Link href={addTransactionHref}>
                 <Plus className="h-4 w-4" />
                 Add
               </Link>
@@ -192,7 +195,7 @@ export function AppShell({
               aria-label="Add transaction"
               asChild
             >
-              <Link href="/transactions/new">
+              <Link href={addTransactionHref}>
                 <Plus className="h-6 w-6" />
                 Add
               </Link>

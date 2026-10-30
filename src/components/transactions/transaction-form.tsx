@@ -109,8 +109,8 @@ export function TransactionForm({
     fromAccountId: initialValues?.fromAccountId ?? emptyValues.fromAccountId,
     toAccountId: initialValues?.toAccountId ?? emptyValues.toAccountId,
   });
-  const [type, setType] = useState<TransactionType>(
-    initialValues?.type ?? emptyValues.type,
+  const [selectedType, setType] = useState<TransactionType | undefined>(
+    initialValues?.type,
   );
   const [amount, setAmount] = useState(initialValues?.amount ?? emptyValues.amount);
   const [toAmount, setToAmount] = useState(initialValues?.toAmount ?? emptyValues.toAmount);
@@ -136,6 +136,12 @@ export function TransactionForm({
   const [categories, setCategories] = useState<FormCategory[]>([]);
   const [photoUrl, setPhotoUrl] = useState(initialValues?.photoUrl ?? emptyValues.photoUrl);
 
+  const initialCategory = mode === "create"
+    ? categories.find((category) => category.id === initialValues?.categoryId)
+    : undefined;
+  const type = selectedType ?? (
+    initialCategory?.type === "INCOME" ? TransactionType.INCOME : emptyValues.type
+  );
   const typeStyles = transactionTypeStyles(type);
 
   useEffect(() => {
@@ -604,7 +610,11 @@ export function TransactionForm({
               <Label>Category</Label>
               <PickerField
                 value={validCategoryId}
-                onValueChange={setCategoryId}
+                onValueChange={(value) => {
+                  // The desktop select can emit an empty value as its async
+                  // options load. Keep the initial category until one is chosen.
+                  if (value) setCategoryId(value);
+                }}
                 options={categoryOptions}
                 placeholder="Select category"
                 title="Select category"

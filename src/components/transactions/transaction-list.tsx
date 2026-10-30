@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { EntityBadge } from "@/components/ui/entity-badge";
 import { deleteTransaction } from "@/actions/transactions";
 import { toast } from "sonner";
-import { getTransactionHref } from "@/lib/transaction-navigation";
+import { getAddTransactionHref, getTransactionHref } from "@/lib/transaction-navigation";
 
 export type TransactionRow = {
   id: string;
@@ -51,7 +51,7 @@ export function TransactionList({ transactions, currency, showYear = false }: Tr
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
         No transactions yet.{" "}
-        <Link href="/transactions/new" className="text-accent hover:underline">
+        <Link href={getAddTransactionHref(pathname, searchParams)} className="text-accent hover:underline">
           Add one
         </Link>{" "}
         or press <kbd className="rounded bg-surface-elevated px-1.5 py-0.5">N</kbd>
